@@ -10,7 +10,7 @@ An agent skill that turns the latest SEC filing (or the period you name) of any 
 
 ![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
-![Data](https://img.shields.io/badge/data-SEC%20EDGAR-8C6A3F?style=flat-square)
+![Data](https://img.shields.io/badge/data-SEC%20EDGAR-151515?style=flat-square)
 ![API key](https://img.shields.io/badge/API%20key-not%20needed-1E7A4C?style=flat-square)
 ![Works with](https://img.shields.io/badge/works%20with-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20any%20agent-6F6A60?style=flat-square)
 
@@ -26,11 +26,19 @@ That's the whole prompt. The agent pulls the 10-Q straight from SEC EDGAR, write
 
 ## No install: the online generator
 
-**[earningscard.tech](https://earningscard.tech/?ui=en)**: type a ticker, pick quarterly or annual and which fiscal year / quarter (any of the last 8 quarters or 5 fiscal years), the card templates, one of 12 styles, an aspect ratio (4:5 / 1:1 / 9:16 / 16:9), a font, and your @handle and avatar watermark. The cards render instantly in your browser; download each as PNG or all of them as a ZIP.
+**[earningscard.tech](https://earningscard.tech/?ui=en)**: three steps.
 
-- Free, no sign-up, nothing to install. Hosted on GitHub Pages, no server.
+1. **Pick a stock**: type a ticker or company name with autocomplete, jump straight to companies that **just reported**, or browse the earnings calendar for the next 14 days. Choose quarterly or annual and which fiscal year / quarter (last 8 quarters or 5 fiscal years).
+2. **Pick a look**: 12 styles with thumbnails, 4 aspect ratios (4:5 / 1:1 / 9:16 / 16:9), English or Chinese.
+3. **Fine-tune**: choose the cards, edit the headline (with data-driven suggestions), add your @handle and avatar watermark, and save your settings as presets.
+
+Cards render one by one in your browser. Copy an image, download each as PNG or all as a ZIP, and grab a ready-to-post caption.
+
+![The online generator](assets/site-en.png)
+
+- Free, no sign-up, nothing to install. Hosted on GitHub Pages, no server. Works from mainland China too (the engine picks the fastest mirror).
 - The browser runs this repo's own `render.py` (through Pyodide), so the cards are identical to the CLI's.
-- Data is precomputed nightly from SEC EDGAR by GitHub Actions (S&P 100 to start; the list lives in [`tools/tickers.txt`](tools/tickers.txt) and can grow to the S&P 500).
+- Data is precomputed nightly from SEC EDGAR by GitHub Actions, currently 103 US stocks ([ticker list](https://earningscard.tech/tickers/?ui=en); source in [`tools/tickers.txt`](tools/tickers.txt), can grow to the S&P 500).
 - Ready-made full sets: the [Mag 7 gallery](https://earningscard.tech/gallery/?lang=en).
 
 ---
@@ -43,6 +51,7 @@ earnings-card makes that image for you, from the filing itself:
 
 - **Official data only.** Every number comes from the company's own SEC filing (XBRL). No scraping, no paid API, no key.
 - **A story, not a spreadsheet.** Seven cards that read like a magazine spread, sized 1080×1350 for X, Threads, Instagram and Xiaohongshu carousels.
+- **Edited like a magazine.** Serif headlines over heavy numerals, one header system and n/N numbering across the set; charts label only the first and latest points, and changes use one restrained ▲▼ in ink green and terracotta.
 - **Things screenshots can't show.** Revenue by business and by region, parsed from the filing's own XBRL. Last quarter's guidance checked against what actually happened.
 - **Honest headlines.** The takeaway is written only from numbers in the data. No price targets, no buy/sell calls, no invented reasons.
 
@@ -175,7 +184,7 @@ ticker ─▶ SEC EDGAR companyfacts ─▶ 8 quarters of GAAP numbers
 - US companies that file with the SEC. A-shares and Hong Kong are on the roadmap.
 - GAAP numbers, which can differ from the adjusted figures in press releases.
 - In quarterly mode a fiscal Q4 is derived (full year minus Q1–Q3) and has no quarterly segment split, so the mix card is skipped; annual mode has the full-year split.
-- The online generator covers the precomputed tickers (S&P 100 to start), keeping the last 8 quarters and 5 fiscal years of each. A few companies, mostly banks, tag their quarterly revenue in ways the script doesn't read, so they may only have annual cards.
+- The online generator covers the precomputed tickers (103 for now), keeping the last 8 quarters and 5 fiscal years of each. A few companies, mostly banks, tag their quarterly revenue in ways the script doesn't read, so they may only have annual cards.
 - Guidance only when the company puts numbers in its earnings release. Apple, Microsoft and Tesla give theirs on the call, so that card is skipped for them.
 
 ## Development
@@ -198,6 +207,7 @@ After an intentional card change, refresh the snapshots with `UPDATE_GOLDEN=1` a
 - [x] [Online generator](https://earningscard.tech/?ui=en): ticker, style, ratio, watermark, cards in the browser
 - [x] Annual mode and four aspect ratios
 - [x] Pick any recent fiscal year / quarter, five extra templates, twelve styles
+- [x] Company-name search, just-reported shortcuts, earnings calendar, copy image and caption
 - [ ] A-shares and Hong Kong stocks
 
 Ideas and bug reports are welcome in issues.

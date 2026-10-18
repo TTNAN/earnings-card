@@ -10,7 +10,7 @@
 
 ![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
-![Data](https://img.shields.io/badge/数据-SEC%20EDGAR-8C6A3F?style=flat-square)
+![Data](https://img.shields.io/badge/数据-SEC%20EDGAR-151515?style=flat-square)
 ![API key](https://img.shields.io/badge/API%20key-不需要-1E7A4C?style=flat-square)
 ![Works with](https://img.shields.io/badge/适用-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20任意%20Agent-6F6A60?style=flat-square)
 
@@ -26,11 +26,19 @@
 
 ## 不想装？在线生成
 
-**[earningscard.tech](https://earningscard.tech/)**：输入股票代码，选季报或年报，再选具体哪个财年、哪个季度（最近 8 个季度、5 个财年都有），选卡片模板、风格（12 种）、图片比例（4:5 / 1:1 / 9:16 / 16:9）、字体、@账号和头像水印，卡片在浏览器里即时生成，可以单张下载 PNG，也可以一键打包 ZIP。
+**[earningscard.tech](https://earningscard.tech/)**：三步出图。
 
-- 免费，不用注册，不用装任何东西，托管在 GitHub Pages 上，没有服务器。
+1. **选股**：输入代码或中文名（「英伟达」也行），自动补全；「刚出财报」一键直达最新披露的公司，下面还有未来 14 天的财报日历。选季报或年报，以及具体哪个财年、哪个季度（最近 8 个季度、5 个财年）。
+2. **选样子**：12 种风格（带缩略图）、4 种比例（4:5 / 1:1 / 9:16 / 16:9）、中英文。
+3. **微调**：勾选要哪几张卡、改标题（会按数据给出几条建议）、@账号和头像水印，常用设置可以存成预设。
+
+卡片一张张在浏览器里画出来，可以复制图片、单张下载 PNG、一键打包 ZIP，还会顺手生成一段能直接发帖的配文。
+
+![在线生成器](assets/site-zh.png)
+
+- 免费，不用注册，不用装任何东西，托管在 GitHub Pages 上，没有服务器。国内网络也能打开（渲染引擎会自动挑最快的镜像）。
 - 浏览器里跑的就是本仓库的 `render.py`（通过 Pyodide），和命令行出来的卡一模一样。
-- 数据每晚由 GitHub Actions 从 SEC EDGAR 预先拉好（先覆盖标普 100，名单在 [`tools/tickers.txt`](tools/tickers.txt)，可以一直加到标普 500）。
+- 数据每晚由 GitHub Actions 从 SEC EDGAR 预先拉好，目前覆盖 103 只美股（[支持列表](https://earningscard.tech/tickers/)，名单在 [`tools/tickers.txt`](tools/tickers.txt)，可以一直加到标普 500）。
 - 想看现成的整套卡片：[七巨头画廊](https://earningscard.tech/gallery/)。
 
 ---
@@ -43,6 +51,7 @@ earnings-card 直接从财报原文帮你做这张图：
 
 - **只用官方数据。** 每个数字都来自公司自己提交给 SEC 的财报（XBRL）。不爬网页，不用付费 API，不需要 key。
 - **讲故事，不是贴表格。** 7 张卡片像一篇杂志专题，竖版 1080×1350，直接发小红书、X、朋友圈多图。
+- **按杂志的标准排版。** 衬线标题配粗黑数字，一套统一的页眉和 n/N 编号；图表只标首尾和最新一期，涨跌统一用 ▲▼ 和克制的墨绿、陶土红，不堆小数字。
 - **截图给不了的东西。** 分业务、分地区营收，直接从财报原始 XBRL 里拆；上季度管理层给的指引，和这季实际结果放在一起对照。
 - **结论克制。** 一句话结论只基于数据里的数字：不给目标价，不荐股，不编造原因。
 
@@ -175,7 +184,7 @@ python3 render.py nvda-26q2.json --out NVDA-26Q2 --style morandi --cards cover,p
 - 仅支持在 SEC 申报的美股公司，A 股、港股在路线图上。
 - GAAP 口径，可能和新闻稿里的调整后数字不同。
 - 季报模式下，财年第四季度是推算值（全年减前三季），没有单季分部数据，这张卡会跳过；年报模式有全年分部数据。
-- 在线生成器只覆盖预先拉好数据的股票（先是标普 100），每只保留最近 8 个季度和 5 个财年，银行等个别公司的季度数据标签特殊，可能只有年报。
+- 在线生成器只覆盖预先拉好数据的股票（目前 103 只），每只保留最近 8 个季度和 5 个财年，银行等个别公司的季度数据标签特殊，可能只有年报。
 - 只有公司在新闻稿里给出数字指引时才有指引卡。苹果、微软、特斯拉只在电话会上讲，这张卡会自动跳过。
 
 ## 开发
@@ -198,6 +207,7 @@ python3 -m unittest discover -s tests
 - [x] [在线生成器](https://earningscard.tech/)：输入代码、选风格比例水印，浏览器里直接出图
 - [x] 年报模式、四种图片比例
 - [x] 选历史财年 / 季度，五种新模板，十二种风格
+- [x] 中文名搜索、刚出财报快捷入口、财报日历、复制图片和配文
 - [ ] A 股、港股
 
 欢迎在 issue 里提想法和 bug。
