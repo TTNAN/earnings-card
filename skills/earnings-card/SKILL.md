@@ -5,7 +5,7 @@ description: Turn a US stock ticker into a beautiful, shareable earnings card (S
 
 # Earnings Card · 财报卡
 
-Make a set of up to seven editorial-quality cards (up to six portrait cards plus a landscape cover) for the latest reported quarter of a US-listed company. Data comes only from SEC EDGAR XBRL filings (free, no API key).
+Make a set of up to seven editorial-quality cards (up to six portrait cards plus a landscape cover) for the latest reported quarter (or fiscal year) of a US-listed company. Data comes only from SEC EDGAR XBRL filings (free, no API key).
 
 ## Steps
 
@@ -14,6 +14,7 @@ Make a set of up to seven editorial-quality cards (up to six portrait cards plus
    export SEC_USER_AGENT="your-name your@email.com"
    python3 scripts/fetch_sec.py NVDA --out /tmp/NVDA.json
    ```
+   For the annual report (10-K) instead of the latest quarter, add `--period annual` (when the user asks for 年报 / full year / FY). Same JSON fields, for the whole fiscal year: YoY is vs the prior year, the trend is 5 years, labels read FY2025 etc. The guidance card is quarterly only.
 2. Read the JSON. Write ONE headline that a reader gets in two seconds:
    - Chinese: at most 18 characters. English: at most 40 characters.
    - Use only numbers in the JSON (revenue_yoy, gross_margin vs gross_margin_prev, net_income_yoy, eps_yoy, trend). No guidance, no price talk, no buy/sell opinions, no causes you cannot see in the data.
@@ -36,7 +37,7 @@ Make a set of up to seven editorial-quality cards (up to six portrait cards plus
    ```
    Rules: only numbers the release states (turn "X plus or minus 2%" into low/high; a point estimate has low = high). `base` and `actual` come from data.json (same GAAP basis as the guidance; skip a metric whose basis doesn't match, e.g. non-GAAP only). Up to 4 next items, 3 prior items. If the release has no numeric outlook (Apple, Microsoft and Tesla give theirs on the call), skip `--guidance`; the card is left out and say so in one line.
    Pick a subset with `--cards cover,profit` when the user only wants some.
-   Options: `--lang zh|en` (match the user's language), `--style light|dark|mono|terminal|salmon|pop` (paper, ink, Swiss black & white, Bloomberg-style terminal, salmon newspaper, Xiaohongshu pop; pick the one the user asks for, default light) or `--style my-style.json` for the user's own colors, font, @handle and avatar (see `styles/README.md`), `--png` (needs `pip install cairosvg`; otherwise open the .html and screenshot).
+   Options: `--ratio 4:5|1:1|9:16|16:9` (default 4:5 portrait 1080×1350; 1:1 square 1080×1080 for Weibo/Instagram; 9:16 story 1080×1920; 16:9 landscape 1920×1080 for X/slides, where the cover is the landscape layout and `wide` is dropped), `--lang zh|en` (match the user's language), `--style light|dark|mono|terminal|salmon|pop` (paper, ink, Swiss black & white, Bloomberg-style terminal, salmon newspaper, Xiaohongshu pop; pick the one the user asks for, default light) or `--style my-style.json` for the user's own colors, font, @handle and avatar (see `styles/README.md`), `--png` (needs `pip install cairosvg`; otherwise open the .html and screenshot).
 4. Give the user the PNG (or HTML) and one line on what stands out. Mention it is GAAP data from the 10-Q/10-K, not company-adjusted figures.
 
 ## Limits
@@ -45,3 +46,4 @@ Make a set of up to seven editorial-quality cards (up to six portrait cards plus
 - GAAP numbers; company "adjusted" EPS in press releases can differ.
 - Fourth quarters are derived as full year minus Q1–Q3 (marked "derived" in the source field).
 - The card shows the latest quarter in SEC filings; results announced today may take a day or two to appear.
+- No-install option for users: the online generator at https://ttnan.github.io/earnings-card/ (precomputed tickers only, S&P 100 to start).

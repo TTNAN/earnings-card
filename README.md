@@ -6,7 +6,7 @@
 
 一个 Agent skill：读取美股公司最新的 SEC 财报，生成 **7 张杂志质感的卡片**：一句话结论、钱从哪里来、利润拆解、利润率趋势、现金流、管理层指引，外加一张横版封面。
 
-**简体中文** · [English](./README.en.md) · [**在线画廊：七巨头整套财报卡 →**](https://ttnan.github.io/earnings-card/)
+**简体中文** · [English](./README.en.md) · [**在线生成器：输入代码直接出图 →**](https://ttnan.github.io/earnings-card/) · [七巨头画廊](https://ttnan.github.io/earnings-card/gallery/)
 
 ![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
@@ -23,6 +23,15 @@
 ```
 
 就这一句。Agent 直接从 SEC EDGAR 拉取季报，只根据数字写一句结论，输出 PNG、SVG 和一个 HTML 汇总页。
+
+## 不想装？在线生成
+
+**[ttnan.github.io/earnings-card](https://ttnan.github.io/earnings-card/)**：输入股票代码，选季报或年报、风格、图片比例（4:5 / 1:1 / 9:16 / 16:9）、字体、@账号和头像水印，卡片在浏览器里即时生成，可以单张下载 PNG，也可以一键打包 ZIP。
+
+- 免费，不用注册，不用装任何东西，托管在 GitHub Pages 上，没有服务器。
+- 浏览器里跑的就是本仓库的 `render.py`（通过 Pyodide），和命令行出来的卡一模一样。
+- 数据每晚由 GitHub Actions 从 SEC EDGAR 预先拉好（先覆盖标普 100，名单在 [`tools/tickers.txt`](tools/tickers.txt)，可以一直加到标普 500）。
+- 想看现成的整套卡片：[七巨头画廊](https://ttnan.github.io/earnings-card/gallery/)。
 
 ---
 
@@ -110,11 +119,18 @@ Make an earnings card for AAPL
 cd skills/earnings-card/scripts
 python3 fetch_sec.py NVDA --out nvda.json
 python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利率稳在 75%" --lang zh --png
+
+# 年报（10-K）：全年数据、同比上一财年、近 5 年趋势；再换个方图比例
+python3 fetch_sec.py NVDA --period annual --out nvda-fy.json
+python3 render.py nvda-fy.json --out NVDA-FY --ratio 1:1 --png
 ```
+
+`fetch_sec.py --period quarter|annual`：默认季报；`annual` 读年报 10-K，卡片上的「季度」会自动换成「财年」，指引卡只有季报才有。
 
 | 参数 | 作用 |
 |---|---|
 | `--lang en\|zh` | 英文或中文 |
+| `--ratio 4:5\|1:1\|9:16\|16:9` | 图片比例：竖版（默认，1080×1350）、方图、长图（Stories）、横版（1920×1080） |
 | `--style light\|dark\|mono\|terminal\|salmon\|pop` 或 `my-style.json` | 六种内置风格，或你自己的配色、字体、水印 |
 | `--cards cover,mix,profit,trend,cash,guide,wide` | 选择要哪几张 |
 | `--guidance guidance.json` | 加上指引卡（Agent 从财报新闻稿里整理） |
@@ -140,7 +156,8 @@ python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利�
 
 - 仅支持在 SEC 申报的美股公司，A 股、港股在路线图上。
 - GAAP 口径，可能和新闻稿里的调整后数字不同。
-- 分部营收需要 10-Q；财年第四季度（年报 10-K）这张卡会跳过。
+- 季报模式下，财年第四季度是推算值（全年减前三季），没有单季分部数据，这张卡会跳过；年报模式有全年分部数据。
+- 在线生成器只覆盖预先拉好数据的股票（先是标普 100），银行等个别公司的季度数据标签特殊，可能只有年报。
 - 只有公司在新闻稿里给出数字指引时才有指引卡。苹果、微软、特斯拉只在电话会上讲，这张卡会自动跳过。
 
 ## 开发
@@ -151,13 +168,17 @@ python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利�
 python3 -m unittest discover -s tests
 ```
 
+`python3 tools/check_layout.py` 会把所有样例 × 4 种比例 × 6 种风格 × 中英文都渲染一遍，检查有没有文字出界或互相重叠（需要装好字体才准）。`python3 tools/build_data.py NVDA` 生成在线生成器用的数据（`docs/data/`）。
+
 有意改动卡片后，用 `UPDATE_GOLDEN=1` 重新生成快照，并在 PR 里说明变化。
 
 ## 路线图
 
 - [ ] 对比市场一致预期，看超预期还是不及预期（自带预期值）
 - [ ] 银行、保险公司专用版式
-- [x] [七巨头财报在线画廊](https://ttnan.github.io/earnings-card/)
+- [x] [七巨头财报在线画廊](https://ttnan.github.io/earnings-card/gallery/)
+- [x] [在线生成器](https://ttnan.github.io/earnings-card/)：输入代码、选风格比例水印，浏览器里直接出图
+- [x] 年报模式、四种图片比例
 - [ ] A 股、港股
 
 欢迎在 issue 里提想法和 bug。

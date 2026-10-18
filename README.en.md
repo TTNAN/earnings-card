@@ -6,7 +6,7 @@
 
 An agent skill that turns the latest SEC filing of any US-listed company into **7 editorial-grade cards**: headline, revenue mix, profit waterfall, margin trend, cash flow, management guidance, and a landscape cover.
 
-[简体中文](./README.md) · **English** · [**Live gallery: full Mag 7 card sets →**](https://ttnan.github.io/earnings-card/?lang=en)
+[简体中文](./README.md) · **English** · [**Online generator: type a ticker, get the cards →**](https://ttnan.github.io/earnings-card/?ui=en) · [Mag 7 gallery](https://ttnan.github.io/earnings-card/gallery/?lang=en)
 
 ![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
@@ -23,6 +23,15 @@ An agent skill that turns the latest SEC filing of any US-listed company into **
 ```
 
 That's the whole prompt. The agent pulls the 10-Q straight from SEC EDGAR, writes a one-line takeaway from the numbers, and renders the set as PNG, SVG and one HTML page.
+
+## No install: the online generator
+
+**[ttnan.github.io/earnings-card](https://ttnan.github.io/earnings-card/?ui=en)**: type a ticker, pick quarterly or annual, a style, an aspect ratio (4:5 / 1:1 / 9:16 / 16:9), a font, and your @handle and avatar watermark. The cards render instantly in your browser; download each as PNG or all of them as a ZIP.
+
+- Free, no sign-up, nothing to install. Hosted on GitHub Pages, no server.
+- The browser runs this repo's own `render.py` (through Pyodide), so the cards are identical to the CLI's.
+- Data is precomputed nightly from SEC EDGAR by GitHub Actions (S&P 100 to start; the list lives in [`tools/tickers.txt`](tools/tickers.txt) and can grow to the S&P 500).
+- Ready-made full sets: the [Mag 7 gallery](https://ttnan.github.io/earnings-card/gallery/?lang=en).
 
 ---
 
@@ -110,11 +119,18 @@ Or run the scripts yourself:
 cd skills/earnings-card/scripts
 python3 fetch_sec.py NVDA --out nvda.json
 python3 render.py nvda.json --out NVDA --headline "Revenue doubled, margins held at 75%" --lang en --png
+
+# Annual report (10-K): full fiscal year, YoY vs the prior year, 5-year trend; square this time
+python3 fetch_sec.py NVDA --period annual --out nvda-fy.json
+python3 render.py nvda-fy.json --out NVDA-FY --ratio 1:1 --lang en --png
 ```
+
+`fetch_sec.py --period quarter|annual`: quarterly by default; `annual` reads the 10-K and the cards switch their wording to fiscal years. The guidance card is quarterly only.
 
 | Option | What it does |
 |---|---|
 | `--lang en\|zh` | English or Chinese cards |
+| `--ratio 4:5\|1:1\|9:16\|16:9` | Card shape: portrait (default, 1080×1350), square, story, landscape (1920×1080) |
 | `--style light\|dark\|mono\|terminal\|salmon\|pop` or `my-style.json` | Six built-in styles, or your own colors, font and watermark |
 | `--cards cover,mix,profit,trend,cash,guide,wide` | Pick the cards you want |
 | `--guidance guidance.json` | Add the guidance card (the agent writes this from the earnings release) |
@@ -140,7 +156,8 @@ ticker ─▶ SEC EDGAR companyfacts ─▶ 8 quarters of GAAP numbers
 
 - US companies that file with the SEC. A-shares and Hong Kong are on the roadmap.
 - GAAP numbers, which can differ from the adjusted figures in press releases.
-- Revenue mix needs a 10-Q; for a fiscal Q4 (reported in the 10-K) that card is skipped.
+- In quarterly mode a fiscal Q4 is derived (full year minus Q1–Q3) and has no quarterly segment split, so the mix card is skipped; annual mode has the full-year split.
+- The online generator covers the precomputed tickers (S&P 100 to start). A few companies, mostly banks, tag their quarterly revenue in ways the script doesn't read, so they may only have annual cards.
 - Guidance only when the company puts numbers in its earnings release. Apple, Microsoft and Tesla give theirs on the call, so that card is skipped for them.
 
 ## Development
@@ -151,13 +168,17 @@ Correct numbers are the whole product, so every number printed on every card is 
 python3 -m unittest discover -s tests
 ```
 
+`python3 tools/check_layout.py` renders every fixture × 4 ratios × 6 styles × both languages and flags any text that leaves the canvas or overlaps other text (needs the fonts installed to be exact). `python3 tools/build_data.py NVDA` builds the generator's data (`docs/data/`).
+
 After an intentional card change, refresh the snapshots with `UPDATE_GOLDEN=1` and explain the diff in your PR.
 
 ## Roadmap
 
 - [ ] Beat / miss vs consensus (bring your own estimates)
 - [ ] Banks and insurers layout
-- [x] [Online gallery for every Mag 7 report](https://ttnan.github.io/earnings-card/?lang=en)
+- [x] [Online gallery for every Mag 7 report](https://ttnan.github.io/earnings-card/gallery/?lang=en)
+- [x] [Online generator](https://ttnan.github.io/earnings-card/?ui=en): ticker, style, ratio, watermark, cards in the browser
+- [x] Annual mode and four aspect ratios
 - [ ] A-shares and Hong Kong stocks
 
 Ideas and bug reports are welcome in issues.
