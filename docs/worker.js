@@ -10,6 +10,20 @@
  *                 {type: "error", id, message, stack}
  *                 {type: "bootError", stage, message, stack}
  *                 {type: "stage", stage}               boot progress, for the error message */
+// Emscripten's tzset reads the zone name as toLocaleTimeString(undefined, {timeZoneName:"short"}).split(" ")[1].
+// Some system locales (e.g. Edge on Chinese Windows) format without a space there, so the name is undefined and
+// Pyodide crashes at boot ("reading 'length'"). Always format that call in en-US so the split works.
+(() => {
+  const orig = Date.prototype.toLocaleTimeString;
+  Date.prototype.toLocaleTimeString = function (locales, opts) {
+    if (opts && opts.timeZoneName) {
+      const r = orig.call(this, "en-US", opts);
+      return r.split(" ")[1] ? r : r + " UTC";
+    }
+    return orig.call(this, locales, opts);
+  };
+})();
+
 "use strict";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
 const LOCAL_PYODIDE = new URL("pyodide/", self.location.href).href;
