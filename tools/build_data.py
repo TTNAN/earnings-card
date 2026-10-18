@@ -14,7 +14,8 @@ its "trend"; "series" holds the trend points they share (enough for each period'
 5-year window). render.period_record(block, period_end) rebuilds the full fetch_sec.py record.
 Segments of a period already in the old file (same accession) are reused, so a nightly run only
 downloads filings it has not seen.
-Also writes docs/data/tickers.json = [[ticker, name], ...] for the search box. A ticker that fails keeps its
+Also writes docs/data/tickers.json = [[ticker, name], ...] for the search box, and docs/data/coverage.json
+(Chinese name and sector from tools/ticker_meta.json, periods on file, missing fields) for docs/tickers/. A ticker that fails keeps its
 previous file; one failure never stops the run. Files are rewritten only when their content changes.
 Set SEC_USER_AGENT to "name email" (SEC requires a contact); requests stay under SEC's 10/s limit.
 """
@@ -125,15 +126,47 @@ def build_one(t, old=None):
     return rec, errors
 
 
+# Fields whose absence in the latest period makes a ticker "partial" in the list (a missing gross margin is
+# normal for banks, insurers and many service companies, so it does not count).
+KEY_FIELDS = ("revenue", "net_income", "eps", "ocf", "fcf")
+META = os.path.join(ROOT, "tools", "ticker_meta.json")
+
+
+def coverage_row(d, meta):
+    """One row of docs/data/coverage.json: what the generator can show for this ticker."""
+    zh, sector = (meta.get(d["ticker"]) or ["", "other"])[:2]
+    row = {"t": d["ticker"], "zh": zh, "sector": sector, "partial": []}
+    for key, period in (("q", "quarter"), ("a", "annual")):
+        ps = (d.get(period) or {}).get("periods") or []
+        row[key] = [p.get("fiscal_label") or p["period_end"] for p in ps]
+        if not ps:
+            row["partial"].append("no_" + period)
+            continue
+        miss = [k for k in KEY_FIELDS if ps[-1].get(k) is None]
+        if miss:
+            row["partial"].append(period + ":" + ",".join(miss))
+    if 0 < len(row["q"]) < 4:
+        row["partial"].append("few_quarter")
+    return row
+
+
 def index(out_dir):
-    rows = []
+    """tickers.json = [[ticker, name]] for the search box; coverage.json adds Chinese names, sectors,
+    the periods on file and what is missing, for the ticker list page and the partial-data note."""
+    rows, cov = [], []
+    try:
+        meta = json.load(open(META, encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = {}
     for f in sorted(os.listdir(out_dir)):
-        if f.endswith(".json") and f != "tickers.json" and f[:-5].isupper():
+        if f.endswith(".json") and f not in ("tickers.json", "coverage.json") and f[:-5].isupper():
             d = json.load(open(os.path.join(out_dir, f), encoding="utf-8"))
             if d.get("quarter") or d.get("annual"):
                 name = d.get("name", "")
                 rows.append([d["ticker"], name.title() if name.isupper() else name])
+                cov.append(dict(coverage_row(d, meta), name=rows[-1][1]))
     write_if_changed(os.path.join(out_dir, "tickers.json"), rows)
+    write_if_changed(os.path.join(out_dir, "coverage.json"), cov)
     return rows
 
 

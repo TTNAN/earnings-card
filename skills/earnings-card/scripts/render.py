@@ -69,9 +69,9 @@ THEMES = {
                    round=0.3, stroke=1, font=SERIF, cjk_font=SERIF_SC, pil=PIL_SERIF, pil_cjk=PIL_SERIF_SC,
                    palette=["#0D7680", "#990F3D", "#593380", "#FF8833", "#96CC28", "#B3A9A0", "#66605C", "#E6D9CE"]),
     "pop": dict(label="Pop · 小红书色块", bg="#FFF5F3", ink="#1B1B1B", sub="#7A6E6C", faint="#FFDCD6", bar="#FFC9C1",
-                up="#11A35B", down="#FF2442", card="#FFFFFF", a1="#FF2442", a2="#FF8A00", a3="#7A6E6C", hi="#FF2442",
+                up="#11A35B", down="#FF2442", card="#FFFFFF", a1="#FF2442", a2="#D46A00", a3="#7A6E6C", hi="#FF2442",
                 round=1.6, stroke=0, band="#FFC9C1",
-                palette=["#FF2442", "#FF8A00", "#FFC300", "#3D7BFF", "#11A35B", "#B25CFF", "#7A6E6C", "#FFDCD6"]),
+                palette=["#FF2442", "#D46A00", "#FFC300", "#3D7BFF", "#11A35B", "#B25CFF", "#7A6E6C", "#FFDCD6"]),
     # bloomberg: terminal-screen orange on black;  keynote: launch-event black, big type, quiet greys
     "bloomberg": dict(label="Bloomberg · 彭博橙", bg="#000000", ink="#FB8B1E", sub="#BDBDBD", faint="#2A2A2A", bar="#4A4A4A",
                       up="#4AF6C3", down="#FF433D", card="#0E0E0E", a1="#FB8B1E", a2="#4AA3FF", a3="#BDBDBD", hi="#FB8B1E",
@@ -92,13 +92,13 @@ THEMES = {
                     pil_cjk=PIL_SERIF_SC,
                     palette=["#2B2118", "#9E2B1F", "#6B5B47", "#A88B5A", "#CBB88F", "#3F6B3A", "#8C7A5E", "#E3D6B6"]),
     # morandi: soft greyed dusty colours
-    "morandi": dict(label="Morandi · 莫兰迪", bg="#E9E4DE", ink="#4A4643", sub="#8A837D", faint="#D6CFC7", bar="#C9C0B6",
-                    up="#6F8F78", down="#B07A74", card="#F2EEE9", a1="#6E7F8D", a2="#B59A85", a3="#9AA597", hi="#8E9AAF",
+    "morandi": dict(label="Morandi · 莫兰迪", bg="#E9E4DE", ink="#4A4643", sub="#6B655F", faint="#D6CFC7", bar="#C9C0B6",
+                    up="#55745E", down="#99605A", card="#F2EEE9", a1="#6E7F8D", a2="#8E7360", a3="#9AA597", hi="#6A7891",
                     band="#C2B8C9", round=1.2, stroke=0,
                     palette=["#6E7F8D", "#B59A85", "#9AA597", "#C2A9A1", "#A69CAC", "#D4C6B5", "#8A837D", "#E3DCD3"]),
     # glass: soft gradient page (SVG linearGradient) with translucent white cards
     "glass": dict(label="Glass · 毛玻璃渐变", bg="#D8CCF0", bg_grad=["#B8C8F8", "#E3C8EE", "#F8DCCB"], ink="#1F2240",
-                  sub="#5A5A7A", faint="#FFFFFF", bar="#FFFFFF", up="#1F8A5B", down="#C8405A", card="#FFFFFF",
+                  sub="#4A4A68", faint="#FFFFFF", bar="#FFFFFF", up="#156B46", down="#A8304A", card="#FFFFFF",
                   card_opacity=0.42, a1="#1F2240", a2="#6B4EFF", a3="#8A86A8", hi="#6B4EFF", band="#B9A8F0",
                   round=1.6, stroke=1.2, card_stroke="#FFFFFF", card_stroke_opacity=0.8,
                   palette=["#6B4EFF", "#1F2240", "#E0699B", "#4AA3C8", "#F2A65A", "#8A86A8", "#FFFFFF", "#C9C2E8"]),
@@ -153,15 +153,45 @@ def _mix(a, b, w):
     return "#" + "".join(f"{round(p + (q - p) * w):02X}" for p, q in zip(x, y))
 
 
-def recolor(t, bg=None, ink=None, hi=None):
-    """Swap a style's page / text / highlight colours and re-derive the tones that depend on them."""
+def _lum(c):
+    out = []
+    for v in _hex(c):
+        v /= 255
+        out.append(v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * out[0] + 0.7152 * out[1] + 0.0722 * out[2]
+
+
+def contrast(a, b):
+    """WCAG contrast ratio of two colours (1..21)."""
+    x, y = sorted((_lum(a), _lum(b)), reverse=True)
+    return (x + 0.05) / (y + 0.05)
+
+
+def ensure_contrast(fg, bg, need=4.5, toward=None):
+    """fg, moved step by step toward `toward` (default black or white, whichever is farther from bg)
+    until it reaches `need` against bg. Returns fg unchanged when it already passes."""
+    if contrast(fg, bg) >= need:
+        return fg
+    toward = toward or ("#000000" if _lum(bg) > 0.18 else "#FFFFFF")
+    for i in range(1, 21):
+        c = _mix(fg, toward, i / 20)
+        if contrast(c, bg) >= need:
+            return c
+    return toward
+
+
+def recolor(t, bg=None, ink=None, hi=None, a2=None, updown=None):
+    """Swap a style's page / text / highlight colours and re-derive the tones that depend on them.
+
+    a2: second accent (operating-margin line, cost bars, 2nd segment colour).
+    updown="cn": red for up, green for down (the convention on Chinese markets)."""
     t = dict(t)
     if bg or ink:
         if bg:   # a custom page colour replaces a gradient page
             t.pop("bg_grad", None)
         bg, ink = bg or t["bg"], ink or t["ink"]
         light = sum(_hex(bg)) > 382
-        t.update(bg=bg, ink=ink, sub=_mix(ink, bg, 0.45), faint=_mix(ink, bg, 0.86), bar=_mix(ink, bg, 0.76),
+        t.update(bg=bg, ink=ink, sub=ensure_contrast(_mix(ink, bg, 0.45), bg, 4.5, ink), faint=_mix(ink, bg, 0.86), bar=_mix(ink, bg, 0.76),
                  card=_mix(bg, "#FFFFFF", 0.5) if light else _mix(bg, ink, 0.05), a1=ink, a3=_mix(ink, bg, 0.5),
                  band=_mix(ink, bg, 0.62))
         if t.get("card_stroke"):
@@ -172,6 +202,12 @@ def recolor(t, bg=None, ink=None, hi=None):
         t["hi"], t["a2"] = hi, hi
         pal = list(t.get("palette") or [t["ink"]])
         t["palette"] = pal[:1] + [hi] + pal[2:]
+    if a2:
+        t["a2"] = a2
+        pal = list(t.get("palette") or [t["ink"], t["hi"]])
+        t["palette"] = pal[:2] + [a2] + pal[3:] if len(pal) >= 2 else pal + [a2]
+    if updown == "cn":
+        t["up"], t["down"] = t["down"], t["up"]
     return t
 
 
@@ -404,7 +440,7 @@ def unit(v, lang):
 def pct(v, sign=True):
     if v is None:
         return "—"
-    return f"{v*100:+.1f}%".replace("-", "−") if sign else f"{v*100:.1f}%"
+    return f"{v*100:+.1f}%".replace("-", "−") if sign else f"{v*100:.1f}%".replace("-", "−")
 
 
 def qlabel(end):
@@ -1688,15 +1724,8 @@ svg{{width:min(92vw,540px);height:auto;box-shadow:0 1px 3px rgba(0,0,0,.1)}}svg[
 <body>{imgs}</body></html>"""
 
 
-def render_cards(d, lang="zh", style="light", cards=None, ratio="4:5", headline="", guidance=None, labels=None):
-    """Render a card set and return [(name, svg)]. Used by the CLI below and by the web app (via Pyodide).
-
-    style: a built-in name, a style JSON path, or a dict from build_style().
-    Cards without data are left out: mix without segments, guide without guidance (and always for annual data);
-    at 16:9 the cover already is the landscape layout, so wide is dropped."""
-    global CURRENT_PAGE
-    t = style if isinstance(style, dict) else resolve_style(style)
-    l = labels_for(lang, d.get("period"))
+def card_names(d, cards=None, ratio="4:5", guidance=None):
+    """The cards render_cards() will draw, in order: the requested ones minus those without data."""
     size = RATIOS[ratio]
     names = [n for n in (cards or DEFAULT_CARDS) if n in CARDS]
     if not (d.get("segments") or {}) and "mix" in names:
@@ -1708,9 +1737,26 @@ def render_cards(d, lang="zh", style="light", cards=None, ratio="4:5", headline=
             names.remove(n)
     if size[0] > size[1] and "cover" in names and "wide" in names:
         names.remove("wide")
+    return names
+
+
+def render_cards(d, lang="zh", style="light", cards=None, ratio="4:5", headline="", guidance=None, labels=None, only=None):
+    """Render a card set and return [(name, svg)]. Used by the CLI below and by the web app (via Pyodide).
+
+    style: a built-in name, a style JSON path, or a dict from build_style().
+    Cards without data are left out: mix without segments, guide without guidance (and always for annual data);
+    at 16:9 the cover already is the landscape layout, so wide is dropped (see card_names()).
+    only: indexes into card_names() to draw just those cards (page numbers stay those of the full set)."""
+    global CURRENT_PAGE
+    t = style if isinstance(style, dict) else resolve_style(style)
+    l = labels_for(lang, d.get("period"))
+    size = RATIOS[ratio]
+    names = card_names(d, cards, ratio, guidance)
     portrait = [n for n in names if n != "wide"]
     out = []
-    for name in names:
+    for i, name in enumerate(names):
+        if only is not None and i not in only:
+            continue
         fn = CARDS[name]
         CURRENT_PAGE = f"{portrait.index(name) + 1}/{len(portrait)}" if name in portrait and len(portrait) > 1 else ""
         if name == "wide":
@@ -1740,14 +1786,146 @@ def web_render(data_json, opts_json):
         custom["handle"] = o["handle"]
     if o.get("avatar"):
         custom["avatar"] = o["avatar"]
-    t = recolor(build_style(custom), o.get("bg"), o.get("ink"), o.get("hi"))
+    t = recolor(build_style(custom), o.get("bg"), o.get("ink"), o.get("hi"), o.get("a2"), o.get("updown"))
+    only = o.get("only")
+    if isinstance(only, int):
+        only = [only]
     res = render_cards(d, o.get("lang") or "zh", t, o.get("cards"), o.get("ratio") or "4:5",
-                       o.get("headline") or "", o.get("guidance"), o.get("labels"))
+                       o.get("headline") or "", o.get("guidance"), o.get("labels"), only)
     out = []
     for name, svg in res:
         m = re.search(r'width="(\d+)" height="(\d+)"', svg)
         out.append({"name": name, "svg": svg, "w": int(m.group(1)), "h": int(m.group(2))})
+    if only is not None:   # one card of a set: also say what the whole set is, for progress and placeholders
+        names = card_names(d, o.get("cards"), o.get("ratio") or "4:5", o.get("guidance"))
+        return json.dumps({"names": names, "cards": out}, ensure_ascii=False)
     return json.dumps(out, ensure_ascii=False)
+
+
+# ---------- share text: a caption and headline ideas, from the numbers only ----------
+CAP = {
+    "zh": dict(q="季报", a="年报", ended="截至", yoy="同比", up="增长", down="下降", pts="个百分点",
+               eps="稀释 EPS", src="数据：SEC EDGAR {form}（GAAP）· 不构成投资建议", tags="#{tk} {zh}#美股 #财报",
+               doubled="营收同比翻倍以上，达 {v}", rev="营收 {v}，同比{dir} {p}", ni="净利润 {v}，同比{dir} {p}",
+               ni_turn="扭亏为盈，净利润 {v}", eps_h="稀释 EPS {v}，同比{dir} {p}", gm="毛利率 {v}，同比{dir} {p} 个百分点", gm_up="提升", rec_tail="，创近 {n} {per}新高",
+               om="营业利润率 {v}", rec="营收 {v}，创近 {n} {per}新高", per_q="个季度", per_a="个财年", fcf="自由现金流 {v}"),
+    "en": dict(q="quarterly results", a="annual results", ended="period ended", yoy="YoY", up="up", down="down", pts="pts",
+               eps="Diluted EPS", src="Data: SEC EDGAR {form} (GAAP) · Not investment advice", tags="#{tk} #earnings #stocks",
+               doubled="Revenue more than doubled YoY to {v}", rev="Revenue {dir} {p} YoY to {v}", ni="Net income {dir} {p} YoY to {v}",
+               ni_turn="Back to profit: net income of {v}", eps_h="EPS {dir} {p} YoY to {v}", gm="Gross margin {v}, {dir} {p} pts YoY", gm_up="up", rec_tail=", the highest in {n} {per}",
+               om="Operating margin of {v}", rec="Revenue of {v}, the highest in {n} {per}", per_q="quarters", per_a="years",
+               fcf="Free cash flow of {v}"),
+}
+
+
+def _eps(v):
+    return ("−" if v < 0 else "") + f"${abs(v):.2f}"
+
+
+def caption(d, lang="zh", name_zh=""):
+    """A plain-text post caption: period, revenue + YoY, margins, net income, EPS, FCF, source, hashtags.
+    Every figure comes from d and uses the same money()/pct() formatting as the cards."""
+    k, l = CAP[lang], labels_for(lang, d.get("period"))
+    tk, rev = d["ticker"], d.get("revenue")
+    name = name_zh if (lang == "zh" and name_zh) else company_name(d)
+    kind = k["a"] if is_annual(d) else k["q"]
+    if lang == "zh":
+        lines = [f"{name}（{tk}）{d.get('fiscal_label', '')} {kind}（{k['ended']} {d['period_end']}）"]
+    else:
+        lines = [f"{name} ({tk}) {d.get('fiscal_label', '')} {kind}, {k['ended']} {d['period_end']}"]
+    sep = "，" if lang == "zh" else ", "
+    if rev is not None:
+        s = f"{l['rev']} {money(rev, lang)}"
+        if d.get("revenue_yoy") is not None:
+            s += f"{sep}{k['yoy']} {pct(d['revenue_yoy'])}"
+        lines.append(s)
+    ni = d.get("net_income")
+    m = [(l["gm"], d.get("gross_margin")), (l["om"], d.get("operating_margin")),
+         (l["nm"], ni / rev if ni is not None and rev else None)]
+    m = [f"{a} {pct(v, False)}" for a, v in m if v is not None]
+    if m:
+        lines.append(" · ".join(m))
+    if ni is not None:
+        s = f"{l['ni']} {money(ni, lang)}"
+        if d.get("net_income_yoy") is not None and (prev_of(d).get("net_income") or 0) > 0 and ni > 0:
+            s += f"{sep}{k['yoy']} {pct(d['net_income_yoy'])}"
+        lines.append(s)
+    if d.get("eps") is not None:
+        s = f"{k['eps']} {_eps(d['eps'])}"
+        if d.get("eps_yoy") is not None and (prev_of(d).get("eps") or 0) > 0 and d["eps"] > 0:
+            s += f"{sep}{k['yoy']} {pct(d['eps_yoy'])}"
+        lines.append(s)
+    if d.get("fcf") is not None:
+        lines.append(f"{l['fcf']} {money(d['fcf'], lang)}")
+    lines.append(k["src"].format(form=d.get("form", "").replace(" (derived)", "")))
+    tag = re.sub(r"[^A-Za-z0-9]", "", tk)
+    lines.append(k["tags"].format(tk=tag, zh=f"#{name_zh} " if name_zh else ""))
+    return "\n".join(lines)
+
+
+def headline_ideas(d, lang="zh", n=3):
+    """Up to n short headlines, each one fact read straight off the numbers (no outlook, no adjectives
+    the data can't back). Strongest first: the biggest relative move wins."""
+    k = CAP[lang]
+    ideas = []
+
+    def chg(v):
+        return ("up" if v >= 0 else "down"), pct(abs(v), False)
+
+    rev, ry = d.get("revenue"), d.get("revenue_yoy")
+    tr = [q.get("revenue") for q in (d.get("trend") or []) if q.get("revenue") is not None]
+    per = k["per_a" if is_annual(d) else "per_q"]
+    record = rev is not None and len(tr) >= 4 and rev >= max(tr)
+    if rev is not None and ry is not None:
+        if ry >= 1:
+            h = k["doubled"].format(v=money(rev, lang))
+        else:
+            dr, p = chg(ry)
+            h = k["rev"].format(v=money(rev, lang), dir=k[dr], p=p)
+        tail = k["rec_tail"].format(n=len(tr), per=per) if record else ""
+        if tail and len(h + tail) <= 60:   # one revenue headline: the move, and that it is the top of the window
+            h, tail = h + tail, ""
+        ideas.append((abs(ry) + (0.3 if record else 0), h))
+        if tail:
+            ideas.append((0.35, k["rec"].format(v=money(rev, lang), n=len(tr), per=per)))
+    elif record:
+        ideas.append((0.35, k["rec"].format(v=money(rev, lang), n=len(tr), per=per)))
+    ni, prev = d.get("net_income"), prev_of(d)
+    pni = prev.get("net_income")
+    if ni is not None and pni is not None:
+        if pni < 0 < ni:
+            ideas.append((0.9, k["ni_turn"].format(v=money(ni, lang))))
+        elif ni > 0 and pni > 0 and d.get("net_income_yoy") is not None:
+            dr, p = chg(d["net_income_yoy"])
+            ideas.append((abs(d["net_income_yoy"]) * 0.9, k["ni"].format(v=money(ni, lang), dir=k[dr], p=p)))
+    eps, pe = d.get("eps"), prev.get("eps")
+    if eps is not None and pe and eps > 0 and pe > 0 and d.get("eps_yoy") is not None:
+        dr, p = chg(d["eps_yoy"])
+        ideas.append((abs(d["eps_yoy"]) * 0.8, k["eps_h"].format(v=_eps(eps), dir=k[dr], p=p)))
+    gm, gp = d.get("gross_margin"), d.get("gross_margin_prev", prev.get("gross_margin"))
+    if gm is not None and gp is not None and abs(gm - gp) >= 0.01:
+        dv = (gm - gp) * 100
+        ideas.append((abs(dv) / 20, k["gm"].format(v=pct(gm, False), dir=k["gm_up" if dv > 0 else "down"], p=f"{abs(dv):.1f}")))
+    om = d.get("operating_margin")
+    if om is not None and om >= 0.25:
+        ideas.append((om / 2, k["om"].format(v=pct(om, False))))
+    if d.get("fcf") is not None and d["fcf"] > 0:
+        ideas.append((0.05, k["fcf"].format(v=money(d["fcf"], lang))))
+    ideas.sort(key=lambda x: -x[0])
+    out = []
+    for _, h in ideas:
+        if h not in out:
+            out.append(h)
+    return out[:n]
+
+
+def web_extras(data_json, opts_json):
+    """For the browser: {"caption", "headlines"} for one period. opts: lang, period_end, name_zh."""
+    d, o = json.loads(data_json), json.loads(opts_json)
+    d = period_record(d, o.get("period_end"))
+    lang = o.get("lang") or "zh"
+    return json.dumps({"caption": caption(d, lang, o.get("name_zh") or ""), "headlines": headline_ideas(d, lang)},
+                      ensure_ascii=False)
 
 
 if __name__ == "__main__":
