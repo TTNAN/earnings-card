@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>earnings-card · 财报卡生成器</title>
-<meta name="description" content="输入美股代码，选季报或年报、风格、比例和水印，在浏览器里即时生成财报卡。数据来自 SEC EDGAR。Type a US ticker and get shareable earnings cards instantly.">
+<meta name="description" content="输入美股代码，选季报或年报（可选历史财年/季度）、风格、比例和水印，在浏览器里即时生成财报卡。数据来自 SEC EDGAR。Type a US ticker and get shareable earnings cards instantly.">
 <meta property="og:title" content="earnings-card · 财报卡生成器">
 <meta property="og:description" content="Type a ticker, get a set of earnings cards from SEC filings. Free, open source, runs in your browser.">
 <meta property="og:image" content="https://ttnan.github.io/earnings-card/gallery/cards/en/NVDA-7-wide.webp">
@@ -41,6 +41,10 @@
 
     <div class="field"><span data-i="period"></span>
       <div class="seg" id="period"><button data-v="quarter" data-i="quarter"></button><button data-v="annual" data-i="annual"></button></div>
+      <div class="pp" id="pp" hidden>
+        <label><small id="fyLab"></small><select id="fy"></select></label>
+        <label><small id="fqLab"></small><select id="fq"></select></label>
+      </div>
     </div>
 
     <div class="field"><span data-i="ratio"></span>

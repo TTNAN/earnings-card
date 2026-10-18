@@ -4,9 +4,9 @@
 
 ### Type a ticker. Get a carousel of earnings cards worth posting.
 
-An agent skill that turns the latest SEC filing of any US-listed company into **7 editorial-grade cards**: headline, revenue mix, profit waterfall, margin trend, cash flow, management guidance, and a landscape cover.
+An agent skill that turns the latest SEC filing (or the period you name) of any US-listed company into **7 editorial-grade cards**: headline, revenue mix, profit waterfall, margin trend, cash flow, management guidance, and a landscape cover. Plus five extra templates (big number, social post, income statement, year over year, scorecard) and 12 styles.
 
-[简体中文](./README.md) · **English** · [**Online generator: type a ticker, get the cards →**](https://ttnan.github.io/earnings-card/?ui=en) · [Mag 7 gallery](https://ttnan.github.io/earnings-card/gallery/?lang=en)
+[简体中文](./README.md) · **English** · [**Online generator: type a ticker, get the cards →**](https://earningscard.tech/?ui=en) · [Mag 7 gallery](https://earningscard.tech/gallery/?lang=en)
 
 ![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
@@ -26,12 +26,12 @@ That's the whole prompt. The agent pulls the 10-Q straight from SEC EDGAR, write
 
 ## No install: the online generator
 
-**[ttnan.github.io/earnings-card](https://ttnan.github.io/earnings-card/?ui=en)**: type a ticker, pick quarterly or annual, a style, an aspect ratio (4:5 / 1:1 / 9:16 / 16:9), a font, and your @handle and avatar watermark. The cards render instantly in your browser; download each as PNG or all of them as a ZIP.
+**[earningscard.tech](https://earningscard.tech/?ui=en)**: type a ticker, pick quarterly or annual and which fiscal year / quarter (any of the last 8 quarters or 5 fiscal years), the card templates, one of 12 styles, an aspect ratio (4:5 / 1:1 / 9:16 / 16:9), a font, and your @handle and avatar watermark. The cards render instantly in your browser; download each as PNG or all of them as a ZIP.
 
 - Free, no sign-up, nothing to install. Hosted on GitHub Pages, no server.
 - The browser runs this repo's own `render.py` (through Pyodide), so the cards are identical to the CLI's.
 - Data is precomputed nightly from SEC EDGAR by GitHub Actions (S&P 100 to start; the list lives in [`tools/tickers.txt`](tools/tickers.txt) and can grow to the S&P 500).
-- Ready-made full sets: the [Mag 7 gallery](https://ttnan.github.io/earnings-card/gallery/?lang=en).
+- Ready-made full sets: the [Mag 7 gallery](https://earningscard.tech/gallery/?lang=en).
 
 ---
 
@@ -76,11 +76,23 @@ earnings-card makes that image for you, from the filing itself:
 </tr>
 </table>
 
-## Six styles, or bring your own
+## Five more templates
 
-![Six built-in styles](examples/en/styles.png)
+![Five extra templates](examples/en/templates.png)
 
-`paper` `ink` `mono` `terminal` `salmon` `pop`. Just ask: "Make NVDA cards in the terminal style".
+Not in the default set; ask for them by name (or tick them in the online generator, where the big-number poster is on by default):
+
+- **Big number** `poster`: one number, revenue and its YoY change, as big as it gets.
+- **Social post** `post`: looks like a post with your @handle and avatar (else "earnings-card"), a few bullet points and a small chart. No made-up likes or reposts.
+- **Income statement** `income`: revenue down to diluted EPS, with share of revenue, year-ago figures and YoY.
+- **Year over year** `yoy`: this period next to the same period last year, six metrics with arrows.
+- **Scorecard** `score`: actual vs management's previous outlook when there is one, else vs the previous quarter (or fiscal year). The card says what it compares. There is no consensus data here, so it never claims a beat or miss vs the Street.
+
+## Twelve styles, or bring your own
+
+![Twelve built-in styles](examples/en/styles.png)
+
+`paper` `ink` `mono` `terminal` `salmon` `pop` `bloomberg` `keynote` `neon` `vintage` `morandi` `glass`. Just ask: "Make NVDA cards in the morandi style".
 
 Want your own colors, font, @handle and avatar watermark? One small JSON file ([guide](skills/earnings-card/styles/README.md)):
 
@@ -123,16 +135,22 @@ python3 render.py nvda.json --out NVDA --headline "Revenue doubled, margins held
 # Annual report (10-K): full fiscal year, YoY vs the prior year, 5-year trend; square this time
 python3 fetch_sec.py NVDA --period annual --out nvda-fy.json
 python3 render.py nvda-fy.json --out NVDA-FY --ratio 1:1 --lang en --png
+
+# An earlier period: by fiscal year as the company numbers it (or by end date); --list shows what exists
+python3 fetch_sec.py NVDA --list
+python3 fetch_sec.py NVDA --fy 2026 --fq 2 --out nvda-26q2.json
+python3 render.py nvda-26q2.json --out NVDA-26Q2 --lang en --style glass --cards cover,poster,yoy,score --png
 ```
 
-`fetch_sec.py --period quarter|annual`: quarterly by default; `annual` reads the 10-K and the cards switch their wording to fiscal years. The guidance card is quarterly only.
+`fetch_sec.py --period quarter|annual`: quarterly by default; `annual` reads the 10-K and the cards switch their wording to fiscal years. The guidance card is quarterly only. `--fy 2026 --fq 2` or `--period-end 2025-07-27` picks an earlier period; its trend charts end at that period.
 
 | Option | What it does |
 |---|---|
 | `--lang en\|zh` | English or Chinese cards |
 | `--ratio 4:5\|1:1\|9:16\|16:9` | Card shape: portrait (default, 1080×1350), square, story, landscape (1920×1080) |
-| `--style light\|dark\|mono\|terminal\|salmon\|pop` or `my-style.json` | Six built-in styles, or your own colors, font and watermark |
-| `--cards cover,mix,profit,trend,cash,guide,wide` | Pick the cards you want |
+| `--style light\|dark\|mono\|terminal\|salmon\|pop\|bloomberg\|keynote\|neon\|vintage\|morandi\|glass` or `my-style.json` | Twelve built-in styles, or your own colors, font and watermark |
+| `--cards cover,mix,profit,trend,cash,guide,wide` | Pick the cards you want; add `poster,post,income,yoy,score` for the extra templates |
+| `--period quarter\|annual`, `--fy`/`--fq`, `--period-end` | With the generator's multi-period data file (`docs/data/NVDA.json`): report type and which period |
 | `--guidance guidance.json` | Add the guidance card (the agent writes this from the earnings release) |
 | `--labels labels.json` | Rename segments, e.g. into Chinese |
 | `--png` | Export PNG next to the SVG |
@@ -157,7 +175,7 @@ ticker ─▶ SEC EDGAR companyfacts ─▶ 8 quarters of GAAP numbers
 - US companies that file with the SEC. A-shares and Hong Kong are on the roadmap.
 - GAAP numbers, which can differ from the adjusted figures in press releases.
 - In quarterly mode a fiscal Q4 is derived (full year minus Q1–Q3) and has no quarterly segment split, so the mix card is skipped; annual mode has the full-year split.
-- The online generator covers the precomputed tickers (S&P 100 to start). A few companies, mostly banks, tag their quarterly revenue in ways the script doesn't read, so they may only have annual cards.
+- The online generator covers the precomputed tickers (S&P 100 to start), keeping the last 8 quarters and 5 fiscal years of each. A few companies, mostly banks, tag their quarterly revenue in ways the script doesn't read, so they may only have annual cards.
 - Guidance only when the company puts numbers in its earnings release. Apple, Microsoft and Tesla give theirs on the call, so that card is skipped for them.
 
 ## Development
@@ -168,7 +186,7 @@ Correct numbers are the whole product, so every number printed on every card is 
 python3 -m unittest discover -s tests
 ```
 
-`python3 tools/check_layout.py` renders every fixture × 4 ratios × 6 styles × both languages and flags any text that leaves the canvas or overlaps other text (needs the fonts installed to be exact). `python3 tools/build_data.py NVDA` builds the generator's data (`docs/data/`).
+`python3 tools/check_layout.py` renders every fixture × 4 ratios × 12 styles × 12 cards × both languages (`--data`: every period of every ticker in `docs/data`) and flags any text that leaves the canvas or overlaps other text (needs the fonts installed to be exact). `python3 tools/build_data.py NVDA` builds the generator's data (`docs/data/`).
 
 After an intentional card change, refresh the snapshots with `UPDATE_GOLDEN=1` and explain the diff in your PR.
 
@@ -176,9 +194,10 @@ After an intentional card change, refresh the snapshots with `UPDATE_GOLDEN=1` a
 
 - [ ] Beat / miss vs consensus (bring your own estimates)
 - [ ] Banks and insurers layout
-- [x] [Online gallery for every Mag 7 report](https://ttnan.github.io/earnings-card/gallery/?lang=en)
-- [x] [Online generator](https://ttnan.github.io/earnings-card/?ui=en): ticker, style, ratio, watermark, cards in the browser
+- [x] [Online gallery for every Mag 7 report](https://earningscard.tech/gallery/?lang=en)
+- [x] [Online generator](https://earningscard.tech/?ui=en): ticker, style, ratio, watermark, cards in the browser
 - [x] Annual mode and four aspect ratios
+- [x] Pick any recent fiscal year / quarter, five extra templates, twelve styles
 - [ ] A-shares and Hong Kong stocks
 
 Ideas and bug reports are welcome in issues.

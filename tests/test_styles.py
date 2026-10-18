@@ -2,7 +2,7 @@ import json, os, tempfile, unittest
 from helpers import load
 import render as R
 
-STYLES = ["light", "dark", "mono", "terminal", "salmon", "pop"]
+STYLES = ["light", "dark", "mono", "terminal", "salmon", "pop", "bloomberg", "keynote", "neon", "vintage", "morandi", "glass"]
 
 
 class Styles(unittest.TestCase):

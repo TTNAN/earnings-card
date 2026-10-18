@@ -5,8 +5,16 @@
   python3 tools/build_data.py NVDA AAPL          # just these
   python3 tools/build_data.py --max-minutes 30   # stop early (the next run picks up the rest)
 
-Writes docs/data/{TICKER}.json = {"ticker", "name", "quarter": {...}, "annual": {...}} (fetch_sec.py schema)
-and docs/data/tickers.json = [[ticker, name], ...] for the search box. A ticker that fails keeps its
+Writes docs/data/{TICKER}.json (schema v2) =
+  {"ticker", "name", "v": 2,
+   "quarter": {"ticker", "company", "period", "cik", "series": [trend points], "periods": [records]},
+   "annual":  {... the same for fiscal years}}
+"periods" holds the last 8 quarters / 5 fiscal years, oldest first, each a fetch_sec.py record without
+its "trend"; "series" holds the trend points they share (enough for each period's own 8-quarter /
+5-year window). render.period_record(block, period_end) rebuilds the full fetch_sec.py record.
+Segments of a period already in the old file (same accession) are reused, so a nightly run only
+downloads filings it has not seen.
+Also writes docs/data/tickers.json = [[ticker, name], ...] for the search box. A ticker that fails keeps its
 previous file; one failure never stops the run. Files are rewritten only when their content changes.
 Set SEC_USER_AGENT to "name email" (SEC requires a contact); requests stay under SEC's 10/s limit.
 """
@@ -28,6 +36,20 @@ def tickers_from_file(path):
         if t and t not in out:
             out.append(t)
     return out
+
+
+KEEP = {"quarter": 8, "annual": 5}
+BLOCK_KEYS = ("ticker", "company", "period", "cik")
+
+
+def _round(v):
+    if isinstance(v, float):
+        return round(v, 6)
+    if isinstance(v, dict):
+        return {k: _round(x) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_round(x) for x in v]
+    return v
 
 
 def slim(d):
@@ -56,17 +78,46 @@ def write_if_changed(path, obj):
 MAX_AGE_DAYS = {"quarter": 270, "annual": 550}
 
 
-def build_one(t):
-    rec, errors = {"ticker": t}, []
+def build_block(t, period, old=None):
+    """The {series, periods} block for one ticker and period type. old: this block from the previous file."""
+    from segments import segments
+    ctx = fetch_sec.load(t, period)
+    ends = sorted(ctx["s"]["revenue"])
+    age = (date.today() - date.fromisoformat(ends[-1])).days
+    if age > MAX_AGE_DAYS[period]:
+        raise SystemExit(f"latest period {ends[-1]} is stale, skipped")
+    prev = {(p["period_end"], p.get("accn")): p for p in ((old or {}).get("periods") or [])}
+    recs, series = [], {}
+    for e in ends[-KEEP[period]:]:
+        d = fetch_sec.record(ctx, e, with_segments=False)
+        hit = prev.get((e, d["accn"]))
+        if hit is not None and "segments" in hit:
+            d["segments"] = hit["segments"]
+        else:
+            try:
+                d["segments"] = segments(d["cik"], d["accn"], d["period_start"], e, period == "annual") if d["accn"] else {}
+            except Exception:   # a bonus; never fail the card for it
+                d["segments"] = {}
+        d = slim(d)
+        for p in d.pop("trend"):
+            series[p["end"]] = p
+        recs.append(d)
+    block = {k: recs[-1][k] for k in BLOCK_KEYS}
+    for d in recs:
+        for k in BLOCK_KEYS + ("source",):
+            d.pop(k, None)
+    block["series"] = [series[e] for e in sorted(series)]
+    block["periods"] = recs
+    return _round(block)
+
+
+def build_one(t, old=None):
+    rec, errors = {"ticker": t, "v": 2}, []
     for period in ("quarter", "annual"):
         try:
-            d = fetch_sec.build(t, period)
-            age = (date.today() - date.fromisoformat(d["period_end"])).days
-            if age > MAX_AGE_DAYS[period]:
-                errors.append(f"{period}: latest period {d['period_end']} is stale, skipped")
-                continue
-            rec[period] = slim(d)
-            rec["name"] = d["company"]
+            o = (old or {}).get(period)
+            rec[period] = build_block(t, period, o if o and "periods" in o else None)
+            rec["name"] = rec[period]["company"]
         except SystemExit as e:
             errors.append(f"{period}: {e}")
         except Exception as e:  # network hiccup, odd filing: skip, keep going
@@ -100,10 +151,15 @@ def main():
         if a.max_minutes and time.time() - start > a.max_minutes * 60:
             print(f"time limit reached, {len(todo) - i} tickers left for the next run")
             break
-        rec, errors = build_one(t)
+        path = os.path.join(a.out, f"{t.replace('.', '-')}.json")
+        try:
+            old = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else None
+        except ValueError:
+            old = None
+        rec, errors = build_one(t, old)
         if rec.get("quarter") or rec.get("annual"):
             ok += 1
-            if write_if_changed(os.path.join(a.out, f"{t.replace('.', '-')}.json"), rec):
+            if write_if_changed(path, rec):
                 changed += 1
         else:
             failed.append(t)

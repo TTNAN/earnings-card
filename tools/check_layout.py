@@ -5,7 +5,11 @@ Uses render.measure() with the style that rendered the card, so run it with the 
 (on a machine without them widths are estimates and the check is only approximate).
 
   python3 tools/check_layout.py            # all fixtures x ratios x styles x langs, prints problems
-  python3 tools/check_layout.py --data     # every ticker in docs/data (quarter + annual), light + terminal
+  python3 tools/check_layout.py --data     # every ticker in docs/data, every stored period, every card
+        [--styles light,terminal,salmon] [--latest] [--tickers NVDA,AAPL] [--shard 0/2]
+
+Layout only depends on a style's font (colours, corners and outlines don't move text), so the default
+--data styles are one per font family: light (sans), terminal (mono), salmon (serif); that covers all 12.
 """
 import os, re, sys, itertools
 import xml.etree.ElementTree as ET
@@ -46,15 +50,26 @@ def problems(svg, margin=24, slack=2):
     return errs
 
 
+def _arg(name, default=None):
+    return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+
+
 def main_data():
-    """Every precomputed ticker in docs/data, both periods, all ratios, both languages."""
+    """Every precomputed ticker in docs/data, every stored period (or --latest), all ratios, both languages, all cards."""
     import glob, json
     ddir = os.path.join(ROOT, "docs", "data")
     common = json.load(open(os.path.join(ddir, "labels-zh.json"), encoding="utf-8"))
+    styles = _arg("--styles", "light,terminal,salmon").split(",")
+    only = set(_arg("--tickers", "").split(",")) - {""}
+    shard = _arg("--shard")
+    k, m = (int(v) for v in shard.split("/")) if shard else (0, 1)
+    cards = R.DEFAULT_CARDS + R.EXTRA_CARDS
     n = bad = 0
-    for f in sorted(glob.glob(os.path.join(ddir, "*.json"))):
+    files = [f for f in sorted(glob.glob(os.path.join(ddir, "*.json")))
+             if os.path.basename(f)[:-5].replace("-", "").isupper()]
+    for fi, f in enumerate(files):
         tk = os.path.basename(f)[:-5]
-        if not tk.replace("-", "").isupper():
+        if (only and tk not in only) or fi % m != k:
             continue
         rec = json.load(open(f, encoding="utf-8"))
         lab = dict(common)
@@ -62,23 +77,28 @@ def main_data():
         if os.path.exists(lp):
             lab.update(json.load(open(lp, encoding="utf-8")))
         for period in ("quarter", "annual"):
-            d = rec.get(period)
-            if not d:
+            block = rec.get(period)
+            if not block:
                 continue
-            for lang in ("en", "zh"):
-                gp = os.path.join(ddir, "guide", f"{tk}-guide-{lang}.json")
-                g = json.load(open(gp, encoding="utf-8")) if os.path.exists(gp) and period == "quarter" else None
-                if g and g["prior"]["period"] != d["fiscal_label"]:
-                    g = None
-                for ratio in R.RATIOS:
-                    for st in ("light", "terminal"):
-                        t = R.build_style({"base": st, "handle": "@handle"})
-                        head = "Revenue up, margins steady" if lang == "en" else "营收增长，利润率稳住"
-                        for name, svg in R.render_cards(d, lang, t, None, ratio, head, g, lab if lang == "zh" else {}):
-                            n += 1
-                            for e in problems(svg):
-                                bad += 1
-                                print(f"{tk} {period} {lang} {ratio} {st} {name}: {e}")
+            ends = [p["period_end"] for p in block.get("periods", [block])]
+            if "--latest" in sys.argv:
+                ends = ends[-1:]
+            for end in ends:
+                d = R.period_record(block, end)
+                for lang in ("en", "zh"):
+                    gp = os.path.join(ddir, "guide", f"{tk}-guide-{lang}.json")
+                    g = json.load(open(gp, encoding="utf-8")) if os.path.exists(gp) and period == "quarter" else None
+                    if g and g["prior"]["period"] != d["fiscal_label"]:
+                        g = None
+                    for ratio in R.RATIOS:
+                        for st in styles:
+                            t = R.build_style({"base": st, "handle": "@handle"})
+                            head = "Revenue up, margins steady" if lang == "en" else "营收增长，利润率稳住"
+                            for name, svg in R.render_cards(d, lang, t, cards, ratio, head, g, lab if lang == "zh" else {}):
+                                n += 1
+                                for e in problems(svg):
+                                    bad += 1
+                                    print(f"{tk} {period} {d.get('fiscal_label')} {lang} {ratio} {st} {name}: {e}", flush=True)
     print(f"{n} cards checked, {bad} problems")
     return 1 if bad else 0
 
@@ -90,7 +110,7 @@ def main():
     from helpers import load, opt
     fixtures = sys.argv[1:] or ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA",
                                 "NVDA-annual", "AAPL-annual", "JPM", "JPM-annual"]
-    styles = ["light", "terminal", "salmon", "pop", "mono", "dark"]
+    styles = [k for k in R.THEMES if k not in ("paper", "ink")]
     n = bad = 0
     for fx in fixtures:
         if not os.path.exists(os.path.join(ROOT, "tests", "fixtures", fx + ".json")):
@@ -104,8 +124,8 @@ def main():
                 for st in styles:
                     t = R.build_style({"base": st, "handle": "@a_long_handle"})
                     for head in ("A fairly long headline for the cover card" if lang == "en" else "营收同比翻倍，毛利率稳在七成五", ""):
-                        for name, svg in R.render_cards(d, lang, t, None, ratio, head, g, labels):
-                            if not head and name not in ("cover", "wide"):
+                        for name, svg in R.render_cards(d, lang, t, R.DEFAULT_CARDS + R.EXTRA_CARDS, ratio, head, g, labels):
+                            if not head and name not in ("cover", "wide", "poster", "post"):
                                 continue
                             n += 1
                             for e in problems(svg):

@@ -4,9 +4,9 @@
 
 ### 输入一个股票代码，得到一整套能直接发出去的财报图。
 
-一个 Agent skill：读取美股公司最新的 SEC 财报，生成 **7 张杂志质感的卡片**：一句话结论、钱从哪里来、利润拆解、利润率趋势、现金流、管理层指引，外加一张横版封面。
+一个 Agent skill：读取美股公司最新（或你指定的那一期）的 SEC 财报，生成 **7 张杂志质感的卡片**：一句话结论、钱从哪里来、利润拆解、利润率趋势、现金流、管理层指引，外加一张横版封面；另有大数字海报、推文截图、完整利润表、同比对比、记分牌五种模板，12 种风格。
 
-**简体中文** · [English](./README.en.md) · [**在线生成器：输入代码直接出图 →**](https://ttnan.github.io/earnings-card/) · [七巨头画廊](https://ttnan.github.io/earnings-card/gallery/)
+**简体中文** · [English](./README.en.md) · [**在线生成器：输入代码直接出图 →**](https://earningscard.tech/) · [七巨头画廊](https://earningscard.tech/gallery/)
 
 ![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
@@ -26,12 +26,12 @@
 
 ## 不想装？在线生成
 
-**[ttnan.github.io/earnings-card](https://ttnan.github.io/earnings-card/)**：输入股票代码，选季报或年报、风格、图片比例（4:5 / 1:1 / 9:16 / 16:9）、字体、@账号和头像水印，卡片在浏览器里即时生成，可以单张下载 PNG，也可以一键打包 ZIP。
+**[earningscard.tech](https://earningscard.tech/)**：输入股票代码，选季报或年报，再选具体哪个财年、哪个季度（最近 8 个季度、5 个财年都有），选卡片模板、风格（12 种）、图片比例（4:5 / 1:1 / 9:16 / 16:9）、字体、@账号和头像水印，卡片在浏览器里即时生成，可以单张下载 PNG，也可以一键打包 ZIP。
 
 - 免费，不用注册，不用装任何东西，托管在 GitHub Pages 上，没有服务器。
 - 浏览器里跑的就是本仓库的 `render.py`（通过 Pyodide），和命令行出来的卡一模一样。
 - 数据每晚由 GitHub Actions 从 SEC EDGAR 预先拉好（先覆盖标普 100，名单在 [`tools/tickers.txt`](tools/tickers.txt)，可以一直加到标普 500）。
-- 想看现成的整套卡片：[七巨头画廊](https://ttnan.github.io/earnings-card/gallery/)。
+- 想看现成的整套卡片：[七巨头画廊](https://earningscard.tech/gallery/)。
 
 ---
 
@@ -76,11 +76,23 @@ earnings-card 直接从财报原文帮你做这张图：
 </tr>
 </table>
 
-## 六种风格，也能用你自己的
+## 再加五种模板
 
-![六种内置风格](examples/zh/styles.png)
+![五种新模板](examples/zh/templates.png)
 
-`杂志米白` `墨黑` `极简黑白` `终端` `财经报纸` `小红书色块`，一句话切换：「用终端风格给 NVDA 做一套」。
+不在默认那套里，想要的时候点名就行（在线生成器里勾选即可，大数字海报默认勾上）：
+
+- **大数字海报** `poster`：只放一个数字，营收和同比，越大越好。
+- **推文截图风** `post`：做成一条帖子的样子，用你设置的 @账号和头像（没设就是 earnings-card），几行要点加一张小图。不编造点赞转发数。
+- **完整利润表** `income`：从营收一路到每股收益，带占营收比例、去年同期和同比。
+- **同比对比卡** `yoy`：本期和去年同期并排，六个指标，涨跌带箭头。
+- **记分牌** `score`：有指引时，对比管理层上一期给的指引；没有就对比上一季度（年报对比上一财年）。卡片上写明比的是什么。这里没有市场一致预期数据，所以不说「超预期 / 不及预期」。
+
+## 十二种风格，也能用你自己的
+
+![十二种内置风格](examples/zh/styles.png)
+
+`杂志米白` `墨黑` `极简黑白` `终端` `财经报纸` `小红书色块` `彭博橙` `苹果发布会` `赛博霓虹` `复古报纸` `莫兰迪` `毛玻璃渐变`，一句话切换：「用莫兰迪风格给 NVDA 做一套」。
 
 想要自己的配色、字体、@账号和头像水印？写一个小 JSON 就行（[说明](skills/earnings-card/styles/README.md)）：
 
@@ -123,16 +135,22 @@ python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利�
 # 年报（10-K）：全年数据、同比上一财年、近 5 年趋势；再换个方图比例
 python3 fetch_sec.py NVDA --period annual --out nvda-fy.json
 python3 render.py nvda-fy.json --out NVDA-FY --ratio 1:1 --png
+
+# 历史某一期：按公司自己的财年编号（或按截止日期）选；--list 列出有哪些期
+python3 fetch_sec.py NVDA --list
+python3 fetch_sec.py NVDA --fy 2026 --fq 2 --out nvda-26q2.json
+python3 render.py nvda-26q2.json --out NVDA-26Q2 --style morandi --cards cover,poster,yoy,score --png
 ```
 
-`fetch_sec.py --period quarter|annual`：默认季报；`annual` 读年报 10-K，卡片上的「季度」会自动换成「财年」，指引卡只有季报才有。
+`fetch_sec.py --period quarter|annual`：默认季报；`annual` 读年报 10-K，卡片上的「季度」会自动换成「财年」，指引卡只有季报才有。`--fy 2026 --fq 2` 或 `--period-end 2025-07-27` 选历史上的某一期，趋势图截止到那一期。
 
 | 参数 | 作用 |
 |---|---|
 | `--lang en\|zh` | 英文或中文 |
 | `--ratio 4:5\|1:1\|9:16\|16:9` | 图片比例：竖版（默认，1080×1350）、方图、长图（Stories）、横版（1920×1080） |
-| `--style light\|dark\|mono\|terminal\|salmon\|pop` 或 `my-style.json` | 六种内置风格，或你自己的配色、字体、水印 |
-| `--cards cover,mix,profit,trend,cash,guide,wide` | 选择要哪几张 |
+| `--style light\|dark\|mono\|terminal\|salmon\|pop\|bloomberg\|keynote\|neon\|vintage\|morandi\|glass` 或 `my-style.json` | 十二种内置风格，或你自己的配色、字体、水印 |
+| `--cards cover,mix,profit,trend,cash,guide,wide` | 选择要哪几张；另有 `poster,post,income,yoy,score` 五种模板可加 |
+| `--period quarter\|annual`、`--fy`/`--fq`、`--period-end` | 用在线生成器的多期数据文件（`docs/data/NVDA.json`）时，选季报/年报和具体哪一期 |
 | `--guidance guidance.json` | 加上指引卡（Agent 从财报新闻稿里整理） |
 | `--labels labels.json` | 给分部改名，比如翻成中文 |
 | `--png` | 同时导出 PNG |
@@ -157,7 +175,7 @@ python3 render.py nvda-fy.json --out NVDA-FY --ratio 1:1 --png
 - 仅支持在 SEC 申报的美股公司，A 股、港股在路线图上。
 - GAAP 口径，可能和新闻稿里的调整后数字不同。
 - 季报模式下，财年第四季度是推算值（全年减前三季），没有单季分部数据，这张卡会跳过；年报模式有全年分部数据。
-- 在线生成器只覆盖预先拉好数据的股票（先是标普 100），银行等个别公司的季度数据标签特殊，可能只有年报。
+- 在线生成器只覆盖预先拉好数据的股票（先是标普 100），每只保留最近 8 个季度和 5 个财年，银行等个别公司的季度数据标签特殊，可能只有年报。
 - 只有公司在新闻稿里给出数字指引时才有指引卡。苹果、微软、特斯拉只在电话会上讲，这张卡会自动跳过。
 
 ## 开发
@@ -168,7 +186,7 @@ python3 render.py nvda-fy.json --out NVDA-FY --ratio 1:1 --png
 python3 -m unittest discover -s tests
 ```
 
-`python3 tools/check_layout.py` 会把所有样例 × 4 种比例 × 6 种风格 × 中英文都渲染一遍，检查有没有文字出界或互相重叠（需要装好字体才准）。`python3 tools/build_data.py NVDA` 生成在线生成器用的数据（`docs/data/`）。
+`python3 tools/check_layout.py` 会把所有样例 × 4 种比例 × 12 种风格 × 12 种卡片 × 中英文都渲染一遍（`--data` 则跑 `docs/data` 里每只股票的每一期），检查有没有文字出界或互相重叠（需要装好字体才准）。`python3 tools/build_data.py NVDA` 生成在线生成器用的数据（`docs/data/`）。
 
 有意改动卡片后，用 `UPDATE_GOLDEN=1` 重新生成快照，并在 PR 里说明变化。
 
@@ -176,9 +194,10 @@ python3 -m unittest discover -s tests
 
 - [ ] 对比市场一致预期，看超预期还是不及预期（自带预期值）
 - [ ] 银行、保险公司专用版式
-- [x] [七巨头财报在线画廊](https://ttnan.github.io/earnings-card/gallery/)
-- [x] [在线生成器](https://ttnan.github.io/earnings-card/)：输入代码、选风格比例水印，浏览器里直接出图
+- [x] [七巨头财报在线画廊](https://earningscard.tech/gallery/)
+- [x] [在线生成器](https://earningscard.tech/)：输入代码、选风格比例水印，浏览器里直接出图
 - [x] 年报模式、四种图片比例
+- [x] 选历史财年 / 季度，五种新模板，十二种风格
 - [ ] A 股、港股
 
 欢迎在 issue 里提想法和 bug。

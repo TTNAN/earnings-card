@@ -5,7 +5,8 @@
  * and the worker sums them (py/measure_tables.py), so layouts match the fonts on screen.
  * Data is precomputed nightly from SEC EDGAR into data/ (the browser can't call SEC directly). */
 "use strict";
-const CARD_ORDER = ["cover", "mix", "profit", "trend", "cash", "guide", "wide"];
+const CARD_ORDER = ["cover", "poster", "mix", "profit", "trend", "cash", "guide", "income", "yoy", "score", "post", "wide"];
+const DEFAULT_OFF = ["income", "yoy", "score", "post"];   // newer templates: in the picker, unchecked until chosen
 const STYLES = [
   {id: "light", zh: "杂志米白", en: "Paper", bg: "#F4F1EA", ink: "#151515", hi: "#8C6A3F"},
   {id: "dark", zh: "墨黑", en: "Ink", bg: "#121212", ink: "#F2EFE8", hi: "#D9A65E"},
@@ -13,6 +14,13 @@ const STYLES = [
   {id: "terminal", zh: "终端", en: "Terminal", bg: "#0A0A0A", ink: "#FFB000", hi: "#33C7FF"},
   {id: "salmon", zh: "财经报纸", en: "Salmon", bg: "#FFF1E5", ink: "#33302E", hi: "#0D7680"},
   {id: "pop", zh: "小红书色块", en: "Pop", bg: "#FFF5F3", ink: "#1B1B1B", hi: "#FF2442"},
+  {id: "bloomberg", zh: "彭博橙", en: "Bloomberg", bg: "#000000", ink: "#FB8B1E", hi: "#4AA3FF"},
+  {id: "keynote", zh: "苹果发布会", en: "Keynote", bg: "#000000", ink: "#F5F5F7", hi: "#2997FF"},
+  {id: "neon", zh: "赛博霓虹", en: "Neon", bg: "#0D0A1A", ink: "#22E4FF", hi: "#FF3DCB"},
+  {id: "vintage", zh: "复古报纸", en: "Vintage", bg: "#EFE4C8", ink: "#2B2118", hi: "#9E2B1F"},
+  {id: "morandi", zh: "莫兰迪", en: "Morandi", bg: "#E9E4DE", ink: "#6E7F8D", hi: "#B59A85"},
+  {id: "glass", zh: "毛玻璃渐变", en: "Glass", bg: "#D8CCF0", ink: "#1F2240", hi: "#6B4EFF",
+   grad: "linear-gradient(135deg,#B8C8F8,#E3C8EE,#F8DCCB)"},
 ];
 // Google Fonts families behind the CSS font stacks render.py writes into the SVG.
 const GFONTS = {
@@ -24,14 +32,16 @@ const WEIGHTS = [400, 500, 600, 700, 800];
 const T = {
   zh: {
     brand: "财报卡生成器", gallery: "画廊", title: "输入代码，生成财报卡",
-    lede: "选季报或年报、风格、比例和水印，卡片在浏览器里即时生成。数据来自 SEC EDGAR 官方财报。",
+    lede: "选季报或年报（最近 8 个季度、5 个财年都能选）、卡片模板、风格、比例和水印，卡片在浏览器里即时生成。数据来自 SEC EDGAR 官方财报。",
     ticker: "股票代码", period: "报告期", quarter: "季报", annual: "年报", ratio: "图片比例", style: "风格",
     customColors: "自定义颜色", cBg: "背景", cInk: "文字", cHi: "强调色", font: "字体", fAuto: "跟随风格",
     fSans: "无衬线", fSerif: "衬线", fMono: "等宽", cardLang: "卡片语言", headline: "一句话标题（可选）",
     headlinePh: "例如：营收同比翻倍，毛利率稳在 75%", headlineHint: "放在封面上，只写数据里看得到的事实。",
     watermark: "水印", handlePh: "@你的账号", avatar: "头像", remove: "移除", cards: "卡片",
     downloadAll: "下载全部（ZIP）", download: "下载 PNG",
-    names: {cover: "封面", mix: "钱从哪里来", profit: "利润拆解", trend: "利润率趋势", cash: "现金流", guide: "管理层指引", wide: "横版封面"},
+    names: {cover: "封面", mix: "钱从哪里来", profit: "利润拆解", trend: "利润率趋势", cash: "现金流", guide: "管理层指引", wide: "横版封面",
+      poster: "大数字海报", post: "推文截图风", income: "完整利润表", yoy: "同比对比卡", score: "记分牌"},
+    fy: "财年", fq: "季度", fqOpt: q => `第 ${q} 季度`, latest: "（最新）", noPrev: "没有去年同期数据",
     noMix: "这期财报没有分业务数据", noGuide: "这只股票这一期没有整理好的指引", noGuideAnnual: "指引只有季报有",
     noWide: "16:9 下封面本身就是横版", r: {"4:5": "竖版 1080×1350：小红书、朋友圈", "1:1": "方图 1080×1080：微博、Instagram",
       "9:16": "长图 1080×1920：Stories、视频号封面", "16:9": "横版 1920×1080：X、公众号头图、PPT"},
@@ -45,14 +55,16 @@ const T = {
   },
   en: {
     brand: "Earnings card generator", gallery: "Gallery", title: "Type a ticker, get the cards",
-    lede: "Pick quarterly or annual, a style, an aspect ratio and your watermark. Cards render instantly in your browser from official SEC filings.",
+    lede: "Pick quarterly or annual (any of the last 8 quarters or 5 fiscal years), card templates, a style, an aspect ratio and your watermark. Cards render instantly in your browser from official SEC filings.",
     ticker: "Ticker", period: "Report", quarter: "Quarterly", annual: "Annual", ratio: "Aspect ratio", style: "Style",
     customColors: "Custom colours", cBg: "Background", cInk: "Text", cHi: "Accent", font: "Font", fAuto: "Style's own",
     fSans: "Sans", fSerif: "Serif", fMono: "Mono", cardLang: "Card language", headline: "Headline (optional)",
     headlinePh: "e.g. Revenue doubled, margins held at 75%", headlineHint: "Goes on the cover. Stick to what the numbers show.",
     watermark: "Watermark", handlePh: "@your_handle", avatar: "Avatar", remove: "Remove", cards: "Cards",
     downloadAll: "Download all (ZIP)", download: "Download PNG",
-    names: {cover: "Cover", mix: "Revenue mix", profit: "Profit", trend: "Margins", cash: "Cash flow", guide: "Outlook", wide: "Wide cover"},
+    names: {cover: "Cover", mix: "Revenue mix", profit: "Profit", trend: "Margins", cash: "Cash flow", guide: "Outlook", wide: "Wide cover",
+      poster: "Big number", post: "Social post", income: "Income statement", yoy: "Year over year", score: "Scorecard"},
+    fy: "Fiscal year", fq: "Quarter", fqOpt: q => `Q${q}`, latest: " (latest)", noPrev: "No year-ago data",
     noMix: "No segment breakdown in this filing", noGuide: "No outlook prepared for this quarter", noGuideAnnual: "Outlook is quarterly only",
     noWide: "At 16:9 the cover already is landscape", r: {"4:5": "Portrait 1080×1350: Instagram, Xiaohongshu", "1:1": "Square 1080×1080",
       "9:16": "Story 1080×1920", "16:9": "Landscape 1920×1080: X, slides"},
@@ -81,7 +93,10 @@ const S = {
   handle: localStorage.echandle || "",
   avatar: localStorage.ecavatar || "",
   colors: {}, colorOn: {},
-  off: new Set((q.get("hide") || "").split(",").filter(Boolean)),
+  end: /^\d{4}-\d{2}-\d{2}$/.test(q.get("e") || "") ? q.get("e") : null,   // chosen period (its end date); null = latest
+  // c = the chosen cards; older links only carry hide = the unchecked ones among the original seven
+  off: q.get("c") ? new Set(CARD_ORDER.filter(c => !q.get("c").split(",").includes(c)))
+    : new Set(DEFAULT_OFF.concat((q.get("hide") || "").split(",").filter(Boolean))),
 };
 if (!S.lang) S.lang = S.ui;
 let engine = null, families = [], tickers = [], dataCache = {}, current = null, rendered = [], seq = 0;
@@ -101,6 +116,7 @@ function applyUI() {
   if (tickers.length) $("#coverage").textContent = t.coverage(tickers.length);
   drawSwatches();
   drawChecks();
+  drawPeriodPicker();
   setSeg("#uilang", S.ui);
   if (current) $("#meta").innerHTML = metaHTML();
   rendered.length && drawGrid(rendered);
@@ -114,7 +130,7 @@ function bindSeg(sel, key, after) {
 }
 function drawSwatches() {
   $("#styles").innerHTML = STYLES.map(s => `<button class="sw${s.id === S.style ? " on" : ""}" data-v="${s.id}">
-    <i style="background:${s.bg}"><b style="background:${s.ink};height:22px"></b><b style="background:${s.hi};height:14px"></b><b style="background:${s.ink};height:9px;opacity:.35"></b></i>
+    <i style="background:${s.grad || s.bg}"><b style="background:${s.ink};height:22px"></b><b style="background:${s.hi};height:14px"></b><b style="background:${s.ink};height:9px;opacity:.35"></b></i>
     <em>${s[S.ui]}</em></button>`).join("");
   document.querySelectorAll(".sw").forEach(b => b.onclick = () => {
     S.style = b.dataset.v; drawSwatches(); syncColorInputs(); schedule();
@@ -133,6 +149,7 @@ function availability() {
   if (S.period === "annual") a.guide = t.noGuideAnnual;
   else if (!(current && current.guide)) a.guide = t.noGuide;
   if (S.ratio === "16:9") a.wide = t.noWide;
+  if (d && "prev" in d && !d.prev) a.income = a.yoy = t.noPrev;
   return a;
 }
 function drawChecks() {
@@ -168,7 +185,7 @@ function setupSearch() {
   const pick = tk => {
     inp.value = tk; ul.hidden = true;
     if (tk !== S.ticker || !current) {
-      if (tk !== S.ticker) { S.headline = ""; $("#headline").value = ""; }   // a headline is about one stock
+      if (tk !== S.ticker) { S.headline = ""; $("#headline").value = ""; S.end = null; }   // a headline and a period are about one stock
       S.ticker = tk; saveURL(); loadTicker();
     }
   };
@@ -219,20 +236,64 @@ async function loadTicker() {
   }
   if (my !== seq) return;
   pickPeriod();
+  drawPeriodPicker();
   schedule(0);
+}
+// A data file holds, per report type, a block {ticker, company, period, series, periods: [...]} (last 8 quarters /
+// 5 fiscal years, oldest first). render.py's period_record() rebuilds the chosen period's trend from series.
+// Older files hold one record per type; treat it as a block with a single period.
+const periodsOf = b => b ? (b.periods || [b]) : [];
+function fyfq(p) {
+  const m = /^FY(\d{4})(?: Q(\d))?/.exec(p.fiscal_label || "");
+  return m ? {fy: m[1], fq: m[2] || ""} : {fy: p.period_end.slice(0, 4), fq: ""};
 }
 function pickPeriod() {
   const c = dataCache[S.ticker];
   if (!c) { current = null; return; }
-  let d = c.rec[S.period];
-  if (!d) {   // only one report type for this stock (e.g. a bank whose quarterly tags we can't read): switch to it
+  let b = c.rec[S.period];
+  if (!b) {   // only one report type for this stock (e.g. a bank whose quarterly tags we can't read): switch to it
     const other = S.period === "quarter" ? "annual" : "quarter";
-    if (c.rec[other]) { S.period = other; setSeg("#period", S.period); d = c.rec[other]; }
+    if (c.rec[other]) { S.period = other; S.end = null; setSeg("#period", S.period); b = c.rec[other]; }
   }
-  // An outlook file belongs to one quarter: use it only while that quarter is the latest.
+  const ps = periodsOf(b);
+  let p = ps.find(x => x.period_end === S.end);
+  if (!p) { p = ps[ps.length - 1]; S.end = null; }
+  if (!p) { current = null; return; }
+  const d = b.periods ? Object.assign({ticker: b.ticker, company: b.company, period: b.period}, p) : p;
+  // An outlook file belongs to one quarter: use it only for that quarter.
   const g = c.guide[S.lang];
-  const guide = d && S.period === "quarter" && g && g.prior && g.prior.period === d.fiscal_label ? g : null;
-  current = d ? {data: d, guide, labels: Object.assign({}, labelsZh || {}, c.labels)} : null;
+  const guide = S.period === "quarter" && g && g.prior && g.prior.period === d.fiscal_label ? g : null;
+  current = {data: d, block: b, guide, labels: Object.assign({}, labelsZh || {}, c.labels)};
+}
+function drawPeriodPicker() {
+  const c = dataCache[S.ticker], b = c && c.rec[S.period], ps = periodsOf(b), t = tr();
+  const fySel = $("#fy"), fqSel = $("#fq");
+  $("#pp").hidden = !ps.length;
+  if (!ps.length) return;
+  const latest = ps[ps.length - 1], cur = ps.find(x => x.period_end === S.end) || latest, k = fyfq(cur);
+  const years = [...new Set(ps.map(x => fyfq(x).fy))].reverse();
+  fySel.innerHTML = years.map(y => `<option value="${y}"${y === k.fy ? " selected" : ""}>FY${y}${y === fyfq(latest).fy && S.period === "annual" ? t.latest : ""}</option>`).join("");
+  const inYear = ps.filter(x => fyfq(x).fy === k.fy).reverse();
+  fqSel.hidden = S.period === "annual";
+  fqSel.innerHTML = inYear.map(x => {
+    const f = fyfq(x).fq;
+    return `<option value="${x.period_end}"${x === cur ? " selected" : ""}>${f ? t.fqOpt(f) : x.period_end}${x === latest ? t.latest : ""}</option>`;
+  }).join("");
+  $("#fyLab").textContent = t.fy; $("#fqLab").textContent = t.fq; $("#fqLab").hidden = S.period === "annual";
+}
+function setupPeriodPicker() {
+  $("#fy").onchange = () => {
+    const ps = periodsOf(dataCache[S.ticker] && dataCache[S.ticker].rec[S.period]);
+    const hit = ps.filter(x => fyfq(x).fy === $("#fy").value);   // newest period of that year
+    const p = hit[hit.length - 1];
+    S.end = p && p !== ps[ps.length - 1] ? p.period_end : null;
+    drawPeriodPicker(); schedule(0);
+  };
+  $("#fq").onchange = () => {
+    const ps = periodsOf(dataCache[S.ticker] && dataCache[S.ticker].rec[S.period]);
+    S.end = $("#fq").value === (ps[ps.length - 1] || {}).period_end ? null : $("#fq").value;
+    drawPeriodPicker(); schedule(0);
+  };
 }
 function metaHTML() {
   const d = current.data;
@@ -246,7 +307,7 @@ function schedule(ms = 140) { clearTimeout(timer); timer = setTimeout(render, ms
 function options() {
   const cards = CARD_ORDER.filter(c => !S.off.has(c));
   const o = {lang: S.lang, style: S.style, font: S.font, ratio: S.ratio, cards, headline: S.headline.trim(),
-    handle: S.handle.trim(), avatar: S.avatar, guidance: current.guide,
+    handle: S.handle.trim(), avatar: S.avatar, guidance: current.guide, period_end: current.data.period_end,
     labels: S.lang === "zh" ? current.labels : {}};
   for (const k of ["bg", "ink", "hi"]) if (S.colorOn[k]) o[k] = $("#c-" + k).value;
   return o;
@@ -257,6 +318,7 @@ let fontPass = 0, jobId = 0, inFlight = 0, rerun = false;
 function render() {
   if (!engine) return;
   pickPeriod();
+  drawPeriodPicker();
   drawChecks();
   if (!dataCache[S.ticker]) return;
   if (!current) { status(tr().noPeriod, true); $("#grid").innerHTML = ""; rendered = []; $("#zip").disabled = true; return; }
@@ -264,7 +326,7 @@ function render() {
   if (inFlight) { rerun = true; return; }
   $("#grid").classList.add("busy");
   inFlight = ++jobId;
-  engine.postMessage({type: "render", id: inFlight, data: JSON.stringify(current.data), opts: JSON.stringify(options())});
+  engine.postMessage({type: "render", id: inFlight, data: JSON.stringify(current.block), opts: JSON.stringify(options())});
 }
 async function onWorker(m) {
   if (m.type !== "result" && m.type !== "error") return;
@@ -477,20 +539,23 @@ function saveURL() {
   const p = new URLSearchParams();
   p.set("t", S.ticker);
   if (S.period !== "quarter") p.set("p", S.period);
+  if (S.end) p.set("e", S.end);
   if (S.ratio !== "4:5") p.set("r", S.ratio);
   if (S.style !== "light") p.set("s", S.style);
   if (S.font !== "auto") p.set("f", S.font);
   if (S.lang !== S.ui) p.set("lang", S.lang);
   if (S.ui !== "zh") p.set("ui", S.ui);
   if (S.headline) p.set("h", S.headline);
-  if (S.off.size) p.set("hide", [...S.off].join(","));
+  const on = CARD_ORDER.filter(c => !S.off.has(c));
+  if (on.join(",") !== CARD_ORDER.filter(c => !DEFAULT_OFF.includes(c)).join(",")) p.set("c", on.join(","));
   history.replaceState(null, "", "?" + p.toString());
 }
 
 // ---------- boot ----------
 async function boot() {
   applyUI();
-  bindSeg("#period", "period");
+  bindSeg("#period", "period", () => { S.end = null; pickPeriod(); drawPeriodPicker(); });
+  setupPeriodPicker();
   bindSeg("#ratio", "ratio", () => { $("#ratiohint").textContent = tr().r[S.ratio]; });
   bindSeg("#font", "font");
   bindSeg("#lang", "lang");

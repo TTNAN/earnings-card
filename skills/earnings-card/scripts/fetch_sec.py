@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Fetch quarterly or full-year financials for a US-listed ticker from SEC EDGAR (free, no API key).
 
-Usage: python3 fetch_sec.py NVDA [--period quarter|annual] [--out data.json]
+Usage: python3 fetch_sec.py NVDA [--period quarter|annual] [--fy 2026 [--fq 2] | --period-end 2025-10-26]
+                            [--list] [--out data.json]
 quarter (default): the latest quarter's key metrics, YoY changes and an 8-quarter trend.
 annual: the latest fiscal year (10-K) with the same fields, YoY vs the prior year and a 5-year trend.
+--fy/--fq or --period-end pick an earlier period instead of the latest (fiscal years as the company
+numbers them, e.g. --fy 2026 --fq 2 = "FY2026 Q2"); the trend then ends at that period.
+--list prints the periods available (newest last) instead of the card data.
 """
-import json, os, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 from datetime import date
 
 UA = os.environ.get("SEC_USER_AGENT", "earnings-card-skill earnings-card@users.noreply.github.com")
@@ -81,8 +85,22 @@ def _days(a, b):
     return (date.fromisoformat(b) - date.fromisoformat(a)).days
 
 
-def quarterly(facts, tags):
-    """Return {end_date: (value, start, filed, form)} of 3-month values, deriving Q4 from FY - Q1..Q3."""
+FILING_FORMS = ("10-Q", "10-K", "20-F", "40-F")
+
+
+def _note_origin(origins, x):
+    """Remember the first periodic filing that reported a period ending x["end"] (the original, not a later comparative)."""
+    if origins is None or not x.get("form", "").startswith(FILING_FORMS):
+        return
+    cur = origins.get(x["end"])
+    if cur is None or x.get("filed", "") < cur[0]:
+        origins[x["end"]] = (x.get("filed", ""), x.get("form", ""), x.get("accn", ""))
+
+
+def quarterly(facts, tags, origins=None):
+    """Return {end_date: (value, start, filed, form)} of 3-month values, deriving Q4 from FY - Q1..Q3.
+
+    origins: optional dict, filled with {end: (filed, form, accn)} of the filing that first reported each period."""
     best = None
     for tag in tags:
         node = facts.get(tag)
@@ -102,6 +120,8 @@ def quarterly(facts, tags):
             continue
         d = _days(x["start"], x["end"])
         rec = (x["val"], x["start"], x.get("filed", ""), x.get("form", ""), x.get("accn", ""))
+        if 80 <= d <= 100 or 170 <= d <= 380:
+            _note_origin(origins, x)
         if 80 <= d <= 100:
             if x["end"] not in q or rec[2] > q[x["end"]][2]:
                 q[x["end"]] = rec
@@ -124,7 +144,7 @@ def quarterly(facts, tags):
     return q
 
 
-def annual(facts, tags):
+def annual(facts, tags, origins=None):
     """Return {end_date: (value, start, filed, form, accn)} of full fiscal-year values (10-K)."""
     best = None
     for tag in tags:
@@ -143,6 +163,7 @@ def annual(facts, tags):
         return {}
     out = {}
     for x in best[1]:
+        _note_origin(origins, x)
         rec = (x["val"], x["start"], x.get("filed", ""), x.get("form", ""), x.get("accn", ""))
         k10 = rec[3].startswith(("10-K", "20-F", "40-F"))
         cur = out.get(x["end"])
@@ -185,21 +206,93 @@ def yoy(series, end):
     return (cur - prev) / abs(prev)
 
 
-def build(ticker, period="quarter"):
-    """period: "quarter" (latest 10-Q/10-K quarter, 8-quarter trend) or "annual" (latest fiscal year, 5-year trend)."""
+def load(ticker, period="quarter"):
+    """Everything needed to build any period's record: company facts and the per-metric series."""
     yearly = period == "annual"
     cik, title = lookup_cik(ticker)
-    data = _get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json", f"{cik}.json")
+    data = _get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json", f"{cik}.json",
+                float(os.environ.get("EC_FACTS_MAX_AGE", 6 * 3600)))
     facts = data["facts"].get("us-gaap", {})
     series = annual if yearly else quarterly
-    s = {k: series(facts, v) for k, v in TAGS.items()}
+    origins = {}
+    s = {k: series(facts, v, origins if k == "revenue" else None) for k, v in TAGS.items()}
     if not s["revenue"]:
         raise SystemExit(f"No {'annual' if yearly else 'quarterly'} revenue found for this company.")
-    end = max(s["revenue"])
-    rev = s["revenue"][end]
     if not s["gross_profit"] and s["cost_of_revenue"]:
         s["gross_profit"] = {e: (v[0] - (_match(s["cost_of_revenue"], e) or 0),) + v[1:]
                              for e, v in s["revenue"].items() if _match(s["cost_of_revenue"], e) is not None}
+    ctx = {"ticker": ticker, "period": period, "yearly": yearly, "cik": cik, "title": title, "data": data,
+           "facts": facts, "s": s, "origins": origins}
+    ctx["labels"] = fiscal_labels(data, sorted(s["revenue"]), yearly)
+    return ctx
+
+
+def fiscal_labels(data, ends, yearly):
+    """{end: "FY2026 Q2" / "FY2026"} for every period, counted back from the latest one's label.
+
+    companyfacts tags each value with the fiscal year of the filing that reported it, so an older period
+    repeated as a comparative in a later filing carries the later year. The latest period is only in its
+    own filing, so its label is right; earlier ones are counted back from it by date."""
+    if not ends:
+        return {}
+    last = ends[-1]
+    lab = _fiscal_label(data, last, yearly)
+    m = re.match(r"FY(\d{4})(?: Q(\d))?$", lab or "")
+    if not m:
+        return {e: _fiscal_label(data, e, yearly) for e in ends}
+    fy, fq = int(m.group(1)), int(m.group(2) or 4)
+    out = {}
+    for e in ends:
+        if yearly:
+            out[e] = f"FY{fy - round(_days(e, last) / 365.25)}"
+        else:
+            idx = fy * 4 + (fq - 1) - round(_days(e, last) / 91.31)
+            out[e] = f"FY{idx // 4} Q{idx % 4 + 1}"
+    return out
+
+
+def periods(ctx):
+    """[(period_end, fiscal_label)] of every period with revenue, oldest first."""
+    return [(e, (ctx.get("labels") or {}).get(e) or _fiscal_label(ctx["data"], e, ctx["yearly"])) for e in sorted(ctx["s"]["revenue"])]
+
+
+def pick_end(ctx, period_end=None, fy=None, fq=None):
+    """The period end to build: the latest by default, else the one matching a date or a fiscal year/quarter."""
+    ends = sorted(ctx["s"]["revenue"])
+    if period_end:
+        hit = [e for e in ends if abs(_days(e, period_end)) <= 10]
+        if not hit:
+            raise SystemExit(f"No {ctx['period']} ending near {period_end}. Available: {', '.join(ends[-8:])}")
+        return hit[-1]
+    if fy:
+        want = f"FY{int(fy)}" + ("" if ctx["yearly"] else f" Q{int(fq or 4)}")
+        hit = [e for e, lab in periods(ctx) if lab == want]
+        if not hit:
+            have = ", ".join(lab or e for e, lab in periods(ctx)[-8:])
+            raise SystemExit(f"No {want} in the filings. Latest available: {have}")
+        return hit[-1]
+    return ends[-1]
+
+
+def build(ticker, period="quarter", period_end=None, fy=None, fq=None, ctx=None, with_segments=True):
+    """period: "quarter" (latest 10-Q/10-K quarter, 8-quarter trend) or "annual" (latest fiscal year, 5-year trend).
+
+    period_end / fy (+ fq) pick an earlier period; its trend window ends at that period."""
+    ctx = ctx or load(ticker, period)
+    end = pick_end(ctx, period_end, fy, fq)
+    return record(ctx, end, with_segments)
+
+
+def record(ctx, end, with_segments=True):
+    """The card data for the period ending `end` (one of ctx["s"]["revenue"]'s keys)."""
+    ticker, period, yearly, data, facts, s = (ctx[k] for k in ("ticker", "period", "yearly", "data", "facts", "s"))
+    cik, title = ctx["cik"], ctx["title"]
+    rev = s["revenue"][end]
+    # filed / form / accession of the filing that first reported this period (a later 10-Q repeats it as a comparative)
+    org = ctx["origins"].get(end)
+    if org and org[0] <= rev[2]:
+        form = org[1] + (" (derived)" if "derived" in rev[3] else "")
+        rev = (rev[0], rev[1], org[0], form, org[2])
 
     def val(k, e=end):
         return _match(s[k], e) if s[k] else None
@@ -209,7 +302,8 @@ def build(ticker, period="quarter"):
         return a / r if a is not None and r else None
 
     prev_year = date.fromisoformat(end).replace(year=date.fromisoformat(end).year - 1).isoformat()
-    trend_ends = sorted(s["revenue"])[-5:] if yearly else sorted(s["revenue"])[-8:]
+    ends = [e for e in sorted(s["revenue"]) if e <= end]
+    trend_ends = ends[-5:] if yearly else ends[-8:]
     out = {
         "ticker": ticker.upper(),
         "period": period,
@@ -218,7 +312,7 @@ def build(ticker, period="quarter"):
         "period_end": end,
         "filed": rev[2],
         "form": rev[3],
-        "fiscal_label": _fiscal_label(data, end, yearly),
+        "fiscal_label": (ctx.get("labels") or {}).get(end) or _fiscal_label(data, end, yearly),
         "revenue": rev[0],
         "revenue_yoy": yoy(s["revenue"], end),
         "gross_margin": margin("gross_profit"),
@@ -235,15 +329,15 @@ def build(ticker, period="quarter"):
         "fcf": (val("ocf") - (val("capex") or 0)) if val("ocf") is not None else None,
         "buyback": val("buyback"), "dividends": val("dividends"),
         "cash": instant(facts, INSTANT["cash"], end), "securities": instant(facts, INSTANT["securities"], end),
-        "trend": [{"end": e, "revenue": s["revenue"][e][0], "net_income": val("net_income", e),
-                   "gross_margin": margin("gross_profit", e), "operating_margin": margin("operating_income", e),
-                   "net_margin": margin("net_income", e),
-                   "fcf": (val("ocf", e) - (val("capex", e) or 0)) if val("ocf", e) is not None else None,
-                   **({"label": "FY" + (_fiscal_label(data, e, True)[2:] or e[:4])[-2:]} if yearly else {})}
-                  for e in trend_ends],
+        "trend": [trend_point(ctx, e) for e in trend_ends],
+        # the same figures a year earlier (YoY columns) and one period earlier (sequential comparisons)
+        "prev": compare_point(ctx, prev_year),
+        "prev_q": compare_point(ctx, ends[-2]) if len(ends) > 1 and not yearly else None,
         "source": f"SEC EDGAR · {rev[3]} filed {rev[2]}",
         "cik": cik, "accn": rev[4],
     }
+    if not with_segments:
+        return out
     try:
         from segments import segments
         out["segments"] = segments(cik, rev[4], rev[1], end, yearly) if rev[4] else {}
@@ -251,6 +345,43 @@ def build(ticker, period="quarter"):
         out["segments"] = {}
         out["segments_error"] = str(e)
     return out
+
+
+def compare_point(ctx, e):
+    """Income-statement and cash-flow figures for the period ending near e (None when that period has no revenue)."""
+    s = ctx["s"]
+
+    def val(k):
+        return _match(s[k], e) if s[k] else None
+
+    rev = val("revenue")
+    if rev is None:
+        return None
+    gp, oi, ni, ocf, capex = val("gross_profit"), val("operating_income"), val("net_income"), val("ocf"), val("capex")
+    out = {"revenue": rev, "cost_of_revenue": rev - gp if gp is not None else None, "gross_profit": gp,
+           "gross_margin": gp / rev if gp is not None and rev else None, "rnd": val("rnd"), "sga": val("sga"),
+           "operating_income": oi, "operating_margin": oi / rev if oi is not None and rev else None,
+           "tax": val("tax"), "net_income": ni, "net_margin": ni / rev if ni is not None and rev else None,
+           "eps": val("eps"), "ocf": ocf, "capex": capex, "fcf": (ocf - (capex or 0)) if ocf is not None else None}
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def trend_point(ctx, e):
+    """One bar / line point of the trend charts, for the period ending e."""
+    s, yearly, data = ctx["s"], ctx["yearly"], ctx["data"]
+
+    def val(k):
+        return _match(s[k], e) if s[k] else None
+
+    def margin(k):
+        a, r = val(k), val("revenue")
+        return a / r if a is not None and r else None
+
+    return {"end": e, "revenue": s["revenue"][e][0], "net_income": val("net_income"),
+            "gross_margin": margin("gross_profit"), "operating_margin": margin("operating_income"),
+            "net_margin": margin("net_income"),
+            "fcf": (val("ocf") - (val("capex") or 0)) if val("ocf") is not None else None,
+            **({"label": "FY" + ((ctx.get("labels") or {}).get(e) or _fiscal_label(data, e, True) or e[:4])[-2:]} if yearly else {})}
 
 
 def _fiscal_label(data, end, yearly=False):
@@ -278,7 +409,13 @@ if __name__ == "__main__":
     per = sys.argv[sys.argv.index("--period") + 1] if "--period" in sys.argv else "quarter"
     if per not in ("quarter", "annual"):
         raise SystemExit("--period must be quarter or annual")
-    res = build(sys.argv[1], per)
+    arg = lambda k: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else None
+    ctx = load(sys.argv[1], per)
+    if "--list" in sys.argv:
+        for e, lab in periods(ctx):
+            print(f"{e}  {lab}")
+        raise SystemExit(0)
+    res = build(sys.argv[1], per, arg("--period-end"), arg("--fy"), arg("--fq"), ctx=ctx)
     if "--out" in sys.argv:
         json.dump(res, open(sys.argv[sys.argv.index("--out") + 1], "w"), indent=2, ensure_ascii=False)
     else:

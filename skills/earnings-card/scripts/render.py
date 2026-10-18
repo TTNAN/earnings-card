@@ -3,8 +3,9 @@
 
 Usage:
   python3 render.py data.json --out ./NVDA [--lang zh|en] [--headline "一句话结论"]
-                    [--style light|dark|mono|terminal|salmon|pop|my-style.json]
-                    [--ratio 4:5|1:1|9:16|16:9] [--cards cover,mix,profit,trend,cash,guide,wide]
+                    [--style light|dark|mono|terminal|salmon|pop|bloomberg|keynote|neon|vintage|morandi|glass|my-style.json]
+                    [--ratio 4:5|1:1|9:16|16:9] [--cards cover,mix,profit,trend,cash,guide,wide,poster,post,income,yoy,score]
+                    [--period-end YYYY-MM-DD | --fy 2026 --fq 2]   (data from tools/build_data.py, schema v2)
                     [--guidance guidance.json] [--labels labels.json] [--png]
 
 Works for quarterly data (default) and annual data (fetch_sec.py --period annual); the labels
@@ -18,6 +19,13 @@ Cards (1080x1350 at the default 4:5 ratio; 1:1 = 1080x1080, 9:16 = 1080x1920, 16
   cash    operating cash flow, capex, free cash flow, buybacks, dividends, cash pile
   guide   next-quarter outlook and last outlook vs actual (only with --guidance, quarterly only)
   wide    1600x900 landscape cover for X / slides (dropped at 16:9, where the cover already is one)
+Extra templates (not in the default set; ask for them with --cards):
+  poster  one big number: revenue and its YoY change, nothing else
+  post    looks like a social-media post (avatar, handle, a summary of the period, a small chart)
+  income  income statement from revenue to EPS, with year-ago figures and YoY
+  yoy     this period next to the same period last year, six metrics with arrows
+  score   scorecard: actual vs management's last outlook (with --guidance), otherwise vs the previous
+          quarter / year. Never vs analyst consensus, which this data does not have; the card says so.
 
 Library use (the web app runs this same file in the browser through Pyodide):
   render_cards(data, lang, style, cards, ratio, headline, guidance, labels) -> [(name, svg)]
@@ -64,6 +72,36 @@ THEMES = {
                 up="#11A35B", down="#FF2442", card="#FFFFFF", a1="#FF2442", a2="#FF8A00", a3="#7A6E6C", hi="#FF2442",
                 round=1.6, stroke=0, band="#FFC9C1",
                 palette=["#FF2442", "#FF8A00", "#FFC300", "#3D7BFF", "#11A35B", "#B25CFF", "#7A6E6C", "#FFDCD6"]),
+    # bloomberg: terminal-screen orange on black;  keynote: launch-event black, big type, quiet greys
+    "bloomberg": dict(label="Bloomberg · 彭博橙", bg="#000000", ink="#FB8B1E", sub="#BDBDBD", faint="#2A2A2A", bar="#4A4A4A",
+                      up="#4AF6C3", down="#FF433D", card="#0E0E0E", a1="#FB8B1E", a2="#4AA3FF", a3="#BDBDBD", hi="#FB8B1E",
+                      band="#6B4A22", round=0, stroke=1.5, card_stroke="#3A2A14", font=MONO, cjk_font=SANS_SC, pil=PIL_MONO,
+                      palette=["#FB8B1E", "#4AA3FF", "#4AF6C3", "#FFFFFF", "#BDBDBD", "#7A5A30", "#FF433D", "#2A2A2A"]),
+    "keynote": dict(label="Keynote · 苹果发布会", bg="#000000", ink="#F5F5F7", sub="#86868B", faint="#1D1D1F", bar="#2C2C2E",
+                    up="#30D158", down="#FF453A", card="#111113", a1="#F5F5F7", a2="#2997FF", a3="#86868B", hi="#2997FF",
+                    band="#3A3A3C", round=1.4, stroke=0,
+                    palette=["#2997FF", "#F5F5F7", "#BF5AF2", "#30D158", "#FF9F0A", "#86868B", "#3A3A3C", "#1D1D1F"]),
+    # neon: purple-black with cyan / magenta accents (flat colours and thin outlines, no blur filters)
+    "neon": dict(label="Neon · 赛博霓虹", bg="#0D0A1A", ink="#EDE9FF", sub="#9A90C8", faint="#2A2347", bar="#3A2F66",
+                 up="#22E4FF", down="#FF3DCB", card="#141029", a1="#22E4FF", a2="#FF3DCB", a3="#9A90C8", hi="#FF3DCB",
+                 band="#5A2F7A", round=1, stroke=1.5, card_stroke="#22E4FF", card_stroke_opacity=0.55,
+                 palette=["#22E4FF", "#FF3DCB", "#B36BFF", "#FFE45C", "#4DFFA6", "#9A90C8", "#3A2F66", "#2A2347"]),
+    "vintage": dict(label="Vintage · 复古报纸", bg="#EFE4C8", ink="#2B2118", sub="#6B5B47", faint="#D6C7A3", bar="#CBB88F",
+                    up="#3F6B3A", down="#9E2B1F", card="#F5ECD5", a1="#2B2118", a2="#9E2B1F", a3="#8C7A5E", hi="#2B2118",
+                    band="#BFA87A", round=0, stroke=1.2, card_stroke="#2B2118", font=SERIF, cjk_font=SERIF_SC, pil=PIL_SERIF,
+                    pil_cjk=PIL_SERIF_SC,
+                    palette=["#2B2118", "#9E2B1F", "#6B5B47", "#A88B5A", "#CBB88F", "#3F6B3A", "#8C7A5E", "#E3D6B6"]),
+    # morandi: soft greyed dusty colours
+    "morandi": dict(label="Morandi · 莫兰迪", bg="#E9E4DE", ink="#4A4643", sub="#8A837D", faint="#D6CFC7", bar="#C9C0B6",
+                    up="#6F8F78", down="#B07A74", card="#F2EEE9", a1="#6E7F8D", a2="#B59A85", a3="#9AA597", hi="#8E9AAF",
+                    band="#C2B8C9", round=1.2, stroke=0,
+                    palette=["#6E7F8D", "#B59A85", "#9AA597", "#C2A9A1", "#A69CAC", "#D4C6B5", "#8A837D", "#E3DCD3"]),
+    # glass: soft gradient page (SVG linearGradient) with translucent white cards
+    "glass": dict(label="Glass · 毛玻璃渐变", bg="#D8CCF0", bg_grad=["#B8C8F8", "#E3C8EE", "#F8DCCB"], ink="#1F2240",
+                  sub="#5A5A7A", faint="#FFFFFF", bar="#FFFFFF", up="#1F8A5B", down="#C8405A", card="#FFFFFF",
+                  card_opacity=0.42, a1="#1F2240", a2="#6B4EFF", a3="#8A86A8", hi="#6B4EFF", band="#B9A8F0",
+                  round=1.6, stroke=1.2, card_stroke="#FFFFFF", card_stroke_opacity=0.8,
+                  palette=["#6B4EFF", "#1F2240", "#E0699B", "#4AA3C8", "#F2A65A", "#8A86A8", "#FFFFFF", "#C9C2E8"]),
 }
 THEMES["paper"], THEMES["ink"] = THEMES["light"], THEMES["dark"]   # friendlier aliases
 FONT, CJK_FONT, _STYLE = SANS, SANS_SC, {}
@@ -119,6 +157,8 @@ def recolor(t, bg=None, ink=None, hi=None):
     """Swap a style's page / text / highlight colours and re-derive the tones that depend on them."""
     t = dict(t)
     if bg or ink:
+        if bg:   # a custom page colour replaces a gradient page
+            t.pop("bg_grad", None)
         bg, ink = bg or t["bg"], ink or t["ink"]
         light = sum(_hex(bg)) > 382
         t.update(bg=bg, ink=ink, sub=_mix(ink, bg, 0.45), faint=_mix(ink, bg, 0.86), bar=_mix(ink, bg, 0.76),
@@ -183,6 +223,35 @@ def labels_for(lang, period=None):
     if period == "annual":
         l.update(L_ANNUAL[lang])
     return l
+
+
+TREND_LEN = {"quarter": 8, "annual": 5}
+
+
+def period_record(block, period_end=None, fy=None, fq=None):
+    """One period's full card data (the fetch_sec.py schema) from a docs/data block {series, periods}.
+
+    period_end (YYYY-MM-DD) or fy (+ fq for quarters) picks the period; default is the latest.
+    A plain fetch_sec.py record (it already has a "trend") is returned as is. None if no period matches."""
+    if "periods" not in block:
+        return block
+    ps = block["periods"]
+    if period_end:
+        hit = [p for p in ps if p["period_end"] == period_end]
+    elif fy:
+        want = f"FY{int(fy)}" + ("" if block.get("period") == "annual" else f" Q{int(fq or 4)}")
+        hit = [p for p in ps if p.get("fiscal_label") == want]
+    else:
+        hit = ps[-1:]
+    if not hit:
+        return None
+    p = hit[-1]
+    d = {k: v for k, v in block.items() if k not in ("series", "periods")}
+    d.update(p)
+    n = TREND_LEN.get(block.get("period"), 8)
+    d["trend"] = [q for q in block["series"] if q["end"] <= p["period_end"]][-n:]
+    d["source"] = f'SEC EDGAR · {p["form"]} filed {p["filed"]}'
+    return d
 
 
 def is_annual(d):
@@ -295,7 +364,7 @@ def text(x, y, s, size, fill, weight=400, anchor="start", ls=0):
             f'fill="{fill}" letter-spacing="{ls}" xml:space="preserve">{body}</text>')
 
 
-def wrap(s, max_w, size, weight):
+def wrap(s, max_w, size, weight, max_lines=2):
     lines, cur = [], ""
     # break on spaces for Latin text, anywhere for CJK
     for ch in re.findall(r"[A-Za-z0-9$%.,;:()'\-–+~]+ ?|.", s):
@@ -305,7 +374,7 @@ def wrap(s, max_w, size, weight):
         cur += ch
     if cur:
         lines.append(cur)
-    return lines[:2]
+    return lines[:max_lines]
 
 
 # ---------- number helpers ----------
@@ -361,6 +430,13 @@ class Card:
         apply_style(t)
         self.o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
                   f'<rect width="{w}" height="{h}" fill="{t["bg"]}"/>']
+        if t.get("bg_grad"):   # gradient page: a solid bg rect underneath, for renderers without gradient support
+            _AV[0] += 1
+            gid = f"bg{_AV[0]}"
+            stops = t["bg_grad"]
+            st = "".join(f'<stop offset="{i / max(len(stops) - 1, 1):.2f}" stop-color="{col}"/>' for i, col in enumerate(stops))
+            self.o.append(f'<defs><linearGradient id="{gid}" x1="0" y1="0" x2="1" y2="1">{st}</linearGradient></defs>'
+                          f'<rect width="{w}" height="{h}" fill="url(#{gid})"/>')
 
     def add(self, *parts):
         self.o.extend(parts)
@@ -373,6 +449,10 @@ class Card:
         t = self.t
         sw = t.get("stroke", 1.5)
         extra = f'stroke="{t.get("card_stroke", t["faint"])}" stroke-width="{sw}"' if sw else ""
+        if sw and t.get("card_stroke_opacity") is not None:
+            extra += f' stroke-opacity="{t["card_stroke_opacity"]}"'
+        if t.get("card_opacity") is not None:
+            extra += f' fill-opacity="{t["card_opacity"]}"'
         self.rect(x, y, w, h, t["card"], rx, extra)
 
     def svg(self):
@@ -694,7 +774,7 @@ def line_chart(c, x, y, w, h, series, labels, lang):
     hi, lo = hi + 0.06, max(-1, lo - 0.06) if lo < 0 else max(0, lo - 0.06)
     n = len(labels)
     right_pad = 150
-    px = lambda i: x + i * (w - right_pad) / (n - 1)
+    px = lambda i: x + i * (w - right_pad) / max(n - 1, 1)
     py = lambda v: y + h - (v - lo) / (hi - lo) * h
     for k in range(5):
         gv = lo + (hi - lo) * k / 4
@@ -968,7 +1048,8 @@ def card_mix(d, l, lang, t, labels=None, size=None):
             c.add(text(x0 + cw - 160, ry, f'{(it.get("share") or 0)*100:.0f}%', 22, t["sub"], 500, "end"))
             yy = it.get("yoy")
             if yy is not None:
-                c.add(text(x0 + cw, ry, f'{pct(yy)} {l["yoy"]}', 22, t["up"] if yy >= 0 else t["down"], 700, "end"))
+                ys_ = f'{pct(yy)} {l["yoy"]}'
+                c.add(text(x0 + cw, ry, ys_, fit(ys_, 146, 22, 700, floor=13), t["up"] if yy >= 0 else t["down"], 700, "end"))
             c.rect(x0, ry + rh * 0.42, cw, 1, t["faint"])
         y += len(items) * rh + 40
         if gi == 0 and len(groups) == 2 and not side and H > 1350:   # 9:16: spread the spare height between groups
@@ -1092,7 +1173,510 @@ def card_guide(d, l, lang, t, g, size=None):
     return c.svg()
 
 
-CARDS = {"cover": card_cover, "mix": card_mix, "guide": card_guide, "profit": card_profit, "trend": card_trend, "cash": card_cash, "wide": card_wide}
+# ---------- extra templates: poster, post, income, yoy, score ----------
+L_EXTRA = {
+    "zh": dict(is_t="完整利润表", is_sub="{cur} 对比 {prev}，单位：美元", col_item="项目", col_cur="本期", col_share="占营收",
+               col_prev="去年同期", col_yoy="同比", yoy_t="和去年同期比", yoy_sub="{cur} 对比 {prev}",
+               last_year="去年同期", score_t="成绩单", vs_guide="对比管理层上一期给的指引（{p}）",
+               vs_prev_q="对比上一季度（截至 {e}）", vs_prev_y="对比上一财年（{p}）",
+               score_guide="项达到或超过指引", score_better="项比{w}更好", w_q="上一季", w_y="上一财年",
+               col_base_g="指引", col_base_q="上一季", col_base_y="上一财年", col_act="本期",
+               better="变好", worse="变差", flat="持平", g_above="超出", g_within="区间内", g_below="低于",
+               no_consensus="这里比的是公司自己的数据，不是市场一致预期，不代表“超预期”或“不及预期”。",
+               post_head="${tk} {fl} 财报：", post_tags="#美股财报 ${tk}", fcf_short="自由现金流",
+               p_rev="营收 {v}，同比 {y}", p_gm="毛利率 {v}，同比 {y}", p_ni="净利润 {v}，同比 {y}",
+               p_eps="稀释每股收益 {v}，同比 {y}", p_fcf="自由现金流 {v}", poster_more="{gm} {gmv} · {ni} {niv} · {eps} {epsv}",
+               eps_short="每股收益"),
+    "en": dict(is_t="Income statement", is_sub="{cur} vs {prev}, in US dollars", col_item="Item", col_cur="This period",
+               col_share="% rev", col_prev="Year ago", col_yoy="YoY", yoy_t="This year vs last year",
+               yoy_sub="{cur} vs {prev}", last_year="Year ago", score_t="Scorecard",
+               vs_guide="Against management's prior outlook ({p})", vs_prev_q="Against the previous quarter (ended {e})",
+               vs_prev_y="Against the previous fiscal year ({p})", score_guide="met or beat the outlook",
+               score_better="better than {w}", w_q="last quarter", w_y="last year",
+               col_base_g="Outlook", col_base_q="Last qtr", col_base_y="Last year", col_act="Actual",
+               better="Better", worse="Worse", flat="Flat", g_above="Above", g_within="Within", g_below="Below",
+               no_consensus="Compared with the company's own numbers, not analyst consensus: this is not a beat or miss vs Street estimates.",
+               post_head="${tk} {fl} earnings:", post_tags="#earnings ${tk}", fcf_short="FCF",
+               p_rev="Revenue {v}, {y} YoY", p_gm="Gross margin {v}, {y} YoY", p_ni="Net income {v}, {y} YoY",
+               p_eps="Diluted EPS {v}, {y} YoY", p_fcf="Free cash flow {v}", poster_more="{gm} {gmv} · {ni} {niv} · {eps} {epsv}",
+               eps_short="EPS"),
+}
+
+
+def _lx(l, lang):
+    x = dict(L_EXTRA[lang])
+    x.update(l)
+    return x
+
+
+def prev_label(d):
+    """FY2026 Q2 -> FY2025 Q2 (the same period a year earlier)."""
+    m = re.match(r"FY(\d{4})(.*)", d.get("fiscal_label") or "")
+    if not m:
+        e = d["period_end"]
+        return f"{int(e[:4]) - 1}{e[4:]}"
+    return f"FY{int(m.group(1)) - 1}{m.group(2)}"
+
+
+def prev_of(d):
+    """The same figures a year earlier: d["prev"] when the data has it, else rebuilt from the trend."""
+    if d.get("prev"):
+        return d["prev"]
+    lag = 1 if is_annual(d) else 4
+    tr = d.get("trend") or []
+    if len(tr) < lag + 1:
+        return {}
+    q = tr[-1 - lag]
+    out = {k: q.get(k) for k in ("revenue", "net_income", "gross_margin", "operating_margin", "net_margin", "fcf")}
+    if q.get("operating_margin") is not None and q.get("revenue"):
+        out["operating_income"] = q["operating_margin"] * q["revenue"]
+    if q.get("gross_margin") is not None and q.get("revenue"):
+        out["gross_profit"] = q["gross_margin"] * q["revenue"]
+        out["cost_of_revenue"] = q["revenue"] - out["gross_profit"]
+    if d.get("eps") is not None and d.get("eps_yoy") not in (None, -1):
+        out["eps"] = d["eps"] / (1 + d["eps_yoy"])
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def prev_seq(d):
+    """The previous period (quarter, or year for annual data)."""
+    if is_annual(d):
+        return prev_of(d)
+    if d.get("prev_q"):
+        return d["prev_q"]
+    tr = d.get("trend") or []
+    if len(tr) < 2:
+        return {}
+    q = tr[-2]
+    out = {k: q.get(k) for k in ("revenue", "net_income", "gross_margin", "operating_margin", "net_margin", "fcf")}
+    return {k: v for k, v in out.items() if v is not None}
+
+
+def cur_vals(d):
+    gp = d["revenue"] - d["cost_of_revenue"] if d.get("cost_of_revenue") is not None else None
+    ni, rev = d.get("net_income"), d.get("revenue")
+    return {"revenue": rev, "cost_of_revenue": d.get("cost_of_revenue"), "gross_profit": gp,
+            "gross_margin": d.get("gross_margin"), "rnd": d.get("rnd"), "sga": d.get("sga"),
+            "operating_income": d.get("operating_income"), "operating_margin": d.get("operating_margin"),
+            "tax": d.get("tax"), "net_income": ni, "net_margin": ni / rev if ni is not None and rev else None,
+            "eps": d.get("eps"), "fcf": d.get("fcf")}
+
+
+def _fmt(k, v, lang):
+    if v is None:
+        return "—"
+    if k.endswith("margin"):
+        return pct(v, False)
+    if k == "eps":
+        return ("−" if v < 0 else "") + f"${abs(v):.2f}"
+    return money(v, lang)
+
+
+def _change(k, cur, prev, l):
+    """(text, value) of the change from prev to cur: pts for margins, % otherwise. None when not comparable."""
+    if cur is None or prev is None:
+        return None
+    if k.endswith("margin"):
+        dv = (cur - prev) * 100
+        return f'{dv:+.1f} {l["pts"]}'.replace("-", "−"), dv / 100
+    if not prev:
+        return None
+    dv = (cur - prev) / abs(prev)
+    return pct(dv), dv
+
+
+def top_bar(c, d, l, P):
+    """Ticker, company and period across the top with a rule under it; returns the rule's y."""
+    t = c.t
+    right = f'{d.get("fiscal_label","")} · {l["ended"]} {d["period_end"]}'
+    ts, cs, rs, y, ry = (30, 20, 18, 100, 122) if c.h <= 1080 else (34, 22, 20, 112, 140)
+    tw = measure(d["ticker"], ts, 800, -0.5)
+    room = c.w - 2 * P - tw - 16 - measure(right, rs, 500) - 24
+    c.add(text(P, y, d["ticker"], ts, t["ink"], 800, ls=-0.5))
+    c.add(text(P + tw + 16, y, clip(company_name(d), room, cs, 500), cs, t["sub"], 500))
+    c.add(text(c.w - P, y, right, rs, t["sub"], 500, "end"))
+    c.rect(P, ry, c.w - 2 * P, 2, t["ink"])
+    return ry
+
+
+def arrow(c, x, y, up, size, color):
+    """A small filled triangle; (x, y) is its left edge at the text baseline."""
+    h = size * 0.62
+    w = size * 0.7
+    if up:
+        pts = f"{x:.1f},{y:.1f} {x + w:.1f},{y:.1f} {x + w / 2:.1f},{y - h:.1f}"
+    else:
+        pts = f"{x:.1f},{y - h:.1f} {x + w:.1f},{y - h:.1f} {x + w / 2:.1f},{y:.1f}"
+    c.add(f'<polygon points="{pts}" fill="{color}"/>')
+    return w
+
+
+def card_poster(d, l, lang, t, headline, size=None):
+    """One number, as big as it gets: revenue and its YoY change."""
+    W, H = size or (1080, 1350)
+    P = 80
+    x = _lx(l, lang)
+    c = Card(W, H, t)
+    y0 = top_bar(c, d, l, P)
+    land, square = W > H, W == H
+    rv = money(d["revenue"], lang)
+    S = fit(rv, W - 2 * P, 230 if land else (200 if square else 250), 800, -6, floor=60)
+    yoy = d.get("revenue_yoy")
+    ys = f'{pct(yoy)} {l["yoy"]}' if yoy is not None else ""
+    ysz = 56 if not square else 48
+    hs = 42 if not square else 36
+    lines = wrap(headline, W - 2 * P, hs, 700) if headline else []
+    eps = "—" if d.get("eps") is None else f'${d["eps"]:.2f}'
+    more = x["poster_more"].format(gm=l["gm"], gmv=pct(d.get("gross_margin"), False), ni=l["ni"],
+                                   niv=money(d.get("net_income"), lang), eps=x["eps_short"], epsv=eps)
+    msz = fit(more, W - 2 * P, 26 if not square else 24, 500, floor=16)
+    # stack the block, then centre it vertically between the top rule and the footer rule
+    items, y = [], 0
+    for line in lines:
+        y += hs
+        items.append(("t", line, y, hs, t["ink"], 700))
+        y += round(hs * 0.32)
+    if lines:
+        y += 44
+    items.append(("bar", None, y, 0, t.get("hi", t["ink"]), 0))
+    y += 8 + 58
+    items.append(("t", l["rev"], y, 30, t["sub"], 500))
+    y += round(0.2 * 30 + 0.74 * S + 28)
+    items.append(("t", rv, y, S, t["ink"], 800))
+    if ys:
+        y += round(0.2 * S + 36 + 0.74 * ysz)
+        items.append(("t", ys, y, ysz, t["up"] if yoy >= 0 else t["down"], 800))
+    y += round(0.2 * ysz + 44 + 0.74 * msz)
+    items.append(("t", more, y, msz, t["sub"], 500))
+    block = y + round(0.2 * msz)
+    top, bottom = y0 + 40, H - 94 - 40
+    off = top + max(0, (bottom - top - block) // 2)
+    for kind, s_, yy, sz, col, wt in items:
+        if kind == "bar":
+            c.rect(W / 2 - 40, off + yy, 80, 8, col, 2)
+        else:
+            c.add(text(W / 2, off + yy, s_, sz, col, wt, "middle", ls=-6 if sz == S else 0))
+    footer(c, d, l, lang, P, "__PAGE__")
+    return c.svg()
+
+
+def post_lines(d, l, lang, x):
+    """The text of the social-post card, one bullet per line (no invented numbers)."""
+    tk, fl = d["ticker"], d.get("fiscal_label") or d["period_end"]
+    out = [("head", x["post_head"].replace("${tk}", "$" + tk).format(fl=fl))]
+    if d.get("revenue_yoy") is not None:
+        out.append(("b", x["p_rev"].format(v=money(d["revenue"], lang), y=pct(d["revenue_yoy"]))))
+    if d.get("gross_margin") is not None and d.get("gross_margin_prev") is not None:
+        dv = (d["gross_margin"] - d["gross_margin_prev"]) * 100
+        out.append(("b", x["p_gm"].format(v=pct(d["gross_margin"], False), y=f'{dv:+.1f} {l["pts"]}'.replace("-", "−"))))
+    if d.get("net_income") is not None and d.get("net_income_yoy") is not None:
+        out.append(("b", x["p_ni"].format(v=money(d["net_income"], lang), y=pct(d["net_income_yoy"]))))
+    if d.get("eps") is not None and d.get("eps_yoy") is not None:
+        out.append(("b", x["p_eps"].format(v=f'${d["eps"]:.2f}', y=pct(d["eps_yoy"]))))
+    if d.get("fcf") is not None:
+        out.append(("b", x["p_fcf"].format(v=money(d["fcf"], lang))))
+    out.append(("tag", x["post_tags"].replace("${tk}", "$" + tk)))
+    return out
+
+
+def card_post(d, l, lang, t, headline, size=None):
+    """Looks like a post on X / Weibo: avatar, name, a short summary of the period and a small chart."""
+    W, H = size or (1080, 1350)
+    P = 80 if W <= 1080 else 120
+    x = _lx(l, lang)
+    c = Card(W, H, t)
+    land, square = W > H, W == H
+    py0, py1 = (70, H - 120) if not square else (60, H - 116)
+    c.box(P, py0, W - 2 * P, py1 - py0, 28)
+    ix, iw = P + 44, W - 2 * P - 88
+    # author row
+    handle = (t.get("handle") or "").strip()
+    name = handle.lstrip("@") or "earnings-card"
+    at = ("@" + handle.lstrip("@")) if handle else "@earnings-card"
+    r = 34 if square else 38
+    cx, cy = ix + r, py0 + 40 + r
+    if t.get("avatar"):
+        _AV[0] += 1
+        cid = f"pav{_AV[0]}"
+        c.add(f'<clipPath id="{cid}"><circle cx="{cx}" cy="{cy}" r="{r}"/></clipPath>'
+              f'<image href="{t["avatar"]}" x="{cx - r}" y="{cy - r}" width="{2 * r}" height="{2 * r}" '
+              f'preserveAspectRatio="xMidYMid slice" clip-path="url(#{cid})"/>')
+    else:
+        c.add(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{t.get("hi", t["ink"])}"/>')
+        ini = (name[:1] or "e").upper()
+        c.add(text(cx, cy + 12, ini, 34, t["bg"], 800, "middle"))
+    nx = ix + 2 * r + 20
+    nroom = ix + iw - nx - 60
+    c.add(text(nx, cy - 6, clip(name, nroom, 30, 800), 30, t["ink"], 800))
+    sub = f'{at} · {d["filed"]}'
+    c.add(text(nx, cy + 28, clip(sub, nroom, 22, 500), 22, t["sub"], 500))
+    for k in range(3):   # the "more" dots
+        c.add(f'<circle cx="{ix + iw - 8 - k * 14}" cy="{cy - 12}" r="3.5" fill="{t["sub"]}"/>')
+    # post text
+    fs = 36 if H > 1350 else (28 if square else 32)
+    lh = round(fs * 1.5)
+    tx_w = iw * 0.5 if land else iw
+    y = cy + r + 34
+    rows = []
+    for kind, s_ in post_lines(d, l, lang, x):
+        if kind == "head" and headline:
+            rows.append((s_, t["ink"], 700))
+            for line in wrap(headline, tx_w, fs, 700):
+                rows.append((line, t["ink"], 700))
+            continue
+        if kind == "b":
+            s_ = "· " + s_
+        col, wt = (t.get("hi", t["ink"]), 600) if kind == "tag" else (t["ink"], 700 if kind == "head" else 400)
+        rows.append((s_, col, wt))
+    max_rows = max(3, int((py1 - 120 - y) // lh)) if land else len(rows)
+    if len(rows) > max_rows:
+        rows = rows[:max_rows - 1] + rows[-1:]
+    for s_, col, wt in rows:
+        y += lh
+        sz = fit(s_, tx_w, fs, wt, floor=18)
+        c.add(text(ix, y - round(fs * 0.35), clip(s_, tx_w, sz, wt), sz, col, wt))
+    # media: a small revenue chart
+    act_y = py1 - 56
+    if land:
+        mx, mw, my, mh = ix + iw * 0.55, iw * 0.45, cy + r + 34, act_y - 30 - (cy + r + 34)
+    else:
+        mx, mw, my, mh = ix, iw, y + 24, act_y - 30 - (y + 24)
+    if mh >= 170:
+        c.rect(mx, my, mw, mh, t["bg"], 20, f'stroke="{t["faint"]}" stroke-width="1.5"')
+        c.add(text(mx + 28, my + 44, l["trend"].format(n=len(d["trend"])), 20, t["sub"], 500))
+        bars(c, mx + 28, my + 58, mw - 56, mh - 58 - 54, [q["revenue"] for q in d["trend"]],
+             [plabel(q) for q in d["trend"]], lang)
+    # action row: reply, repost, like, share (icons only, no made-up counts)
+    c.rect(ix, act_y - 4, iw, 1.5, t["faint"])
+    sw = f'fill="none" stroke="{t["sub"]}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"'
+    ay = act_y + 28
+    xs = [ix + 10 + iw * k / 4 for k in range(4)]
+    c.add(f'<path d="M{xs[0]:.1f},{ay - 11} h22 a6,6 0 0 1 6,6 v10 a6,6 0 0 1 -6,6 h-12 l-8,7 v-7 h-2 a6,6 0 0 1 -6,-6 v-10 a6,6 0 0 1 6,-6 z" {sw}/>')
+    c.add(f'<path d="M{xs[1]:.1f},{ay - 2} v-6 h20 l-5,-5 M{xs[1] + 30:.1f},{ay + 2} v6 h-20 l5,5" {sw}/>')
+    hx = xs[2] + 14
+    c.add(f'<path d="M{hx:.1f},{ay + 12} l-12,-12 a7,7 0 0 1 12,-9 a7,7 0 0 1 12,9 z" {sw}/>')
+    c.add(f'<path d="M{xs[3] + 12:.1f},{ay + 10} v-22 l-8,8 M{xs[3] + 12:.1f},{ay - 12} l8,8" {sw}/>')
+    footer(c, d, l, lang, P, "__PAGE__")
+    return c.svg()
+
+
+INCOME_ROWS = [("rev", "revenue", True), ("cost", "cost_of_revenue", False), ("gp", "gross_profit", True),
+               ("rnd", "rnd", False), ("sga", "sga", False), ("oi", "operating_income", True),
+               ("tax", "tax", False), ("ni", "net_income", True), ("eps", "eps", True)]
+COSTS = {"cost_of_revenue", "rnd", "sga", "tax"}
+
+
+def card_income(d, l, lang, t, size=None):
+    """The income statement from revenue down to EPS, with the year-ago figures and the YoY change."""
+    W, H = size or (1080, 1350)
+    P = 80
+    x = _lx(l, lang)
+    c = Card(W, H, t)
+    cur_fl = d.get("fiscal_label") or d["period_end"]
+    y = small_header(c, d, l, x["is_t"], x["is_sub"].format(cur=cur_fl, prev=prev_label(d)), P)
+    cur, prev = cur_vals(d), prev_of(d)
+    rows = [(l[k], key, total) for k, key, total in INCOME_ROWS if cur.get(key) is not None]
+    iw = W - 2 * P
+    ends = [P + iw * f for f in ((0.52, 0.65, 0.85, 1.0) if W <= 1080 else (0.5, 0.62, 0.83, 1.0))]
+    item_w = iw * (0.30 if W <= 1080 else 0.36)
+    hy = y + 14
+    hsz = 18
+    c.add(text(P, hy, x["col_item"], hsz, t["sub"], 600))
+    for e_, lab in zip(ends, (x["col_cur"], x["col_share"], x["col_prev"], x["col_yoy"])):
+        c.add(text(e_, hy, lab, hsz, t["sub"], 600, "end"))
+    c.rect(P, hy + 16, iw, 2, t["ink"])
+    top = hy + 18
+    bottom = H - 150
+    rh = min(124 if H > 1350 else 84, (bottom - top) / max(len(rows), 1))
+    col_w = (ends[0] - P - item_w - 20)
+    for i, (lab, key, total) in enumerate(rows):
+        ry = top + i * rh
+        base = round(ry + rh / 2 + 9)
+        if total and key not in ("revenue", "eps"):
+            c.rect(P, ry, iw, rh, t["card"], 0, f'fill-opacity="{t.get("card_opacity", 1)}"')
+        lsz, vsz, vw = (24, 26, 800) if total else (22, 23, 600)
+        c.add(text(P + (0 if total else 18), base, clip(lab, item_w - (0 if total else 18), lsz, 700 if total else 500),
+                   lsz, t["ink"] if total else t["sub"], 700 if total else 500))
+        cv, pv = cur.get(key), prev.get(key)
+        vs = _fmt(key, cv, lang)
+        c.add(text(ends[0], base, vs, fit(vs, col_w, vsz, vw, floor=14), t["ink"], vw, "end"))
+        if key != "eps" and d.get("revenue"):
+            sh = f'{cv / d["revenue"] * 100:.1f}%'
+            c.add(text(ends[1], base, sh, 19, t["sub"], 500, "end"))
+        ps = _fmt(key, pv, lang)
+        c.add(text(ends[2], base, ps, fit(ps, ends[2] - ends[1] - 24, 22, 500, floor=14), t["sub"], 500, "end"))
+        ch = _change(key, cv, pv, l)
+        if ch:
+            good = ch[1] >= 0 if key not in COSTS else None
+            col = t["sub"] if good is None else (t["up"] if good else t["down"])
+            c.add(text(ends[3], base, ch[0], fit(ch[0], ends[3] - ends[2] - 20, 21, 700, floor=14), col, 700, "end"))
+        else:
+            c.add(text(ends[3], base, "—", 21, t["sub"], 500, "end"))
+        c.rect(P, ry + rh - 1, iw, 1, t["faint"])
+    footer(c, d, l, lang, P, "__PAGE__")
+    return c.svg()
+
+
+YOY_METRICS = [("rev", "revenue"), ("gm", "gross_margin"), ("om", "operating_margin"), ("ni", "net_income"),
+               ("eps", "eps"), ("fcf", "fcf")]
+
+
+def card_yoy(d, l, lang, t, size=None):
+    """This period next to the same period a year earlier, six metrics with arrows."""
+    W, H = size or (1080, 1350)
+    P = 80
+    x = _lx(l, lang)
+    c = Card(W, H, t)
+    cur_fl, prev_fl = d.get("fiscal_label") or d["period_end"], prev_label(d)
+    y = small_header(c, d, l, x["yoy_t"], x["yoy_sub"].format(cur=cur_fl, prev=prev_fl), P)
+    cur, prev = cur_vals(d), prev_of(d)
+    items = [(l[k], key) for k, key in YOY_METRICS if cur.get(key) is not None and prev.get(key) is not None][:6]
+    cols = 2 if W < H else 3
+    nrow = max(1, -(-len(items) // cols))
+    g = 18
+    top, bottom = y, H - 130
+    cw = (W - 2 * P - g * (cols - 1)) / cols
+    ch = min((bottom - top - g * (nrow - 1)) / nrow, 420)
+    vs0 = 46 if ch < 300 else 60
+    for i, (lab, key) in enumerate(items):
+        bx, by = P + (i % cols) * (cw + g), top + (i // cols) * (ch + g)
+        c.box(bx, by, cw, ch, 18)
+        inner = cw - 52
+        cv, pv = cur[key], prev[key]
+        c.add(text(bx + 26, by + 44, clip(lab, inner, 22, 600), 22, t["sub"], 600))
+        val = _fmt(key, cv, lang)
+        vs = fit(val, inner, vs0, 800, -1)
+        vy = round(by + 44 + 18 + vs0 * 0.95)
+        c.add(text(bx + 26, vy, val, vs, t["ink"], 800, ls=-1))
+        ps = f'{x["last_year"]} {_fmt(key, pv, lang)}'
+        py = vy + 44
+        c.add(text(bx + 26, py, ps, fit(ps, inner, 21, 500, floor=14), t["sub"], 500))
+        chg = _change(key, cv, pv, l)
+        dy = py + 44
+        if chg:
+            up = chg[1] >= 0
+            col = t["up"] if up else t["down"]
+            aw = arrow(c, bx + 26, dy, up, 24, col)
+            c.add(text(bx + 26 + aw + 10, dy, chg[0], fit(chg[0], inner - aw - 10, 24, 800, floor=14), col, 800))
+        # paired bars: year ago (light) and now (strong), on one scale
+        bb = by + ch - 26
+        if bb - dy > 48:
+            mx = max(abs(cv), abs(pv)) or 1
+            for k, (v, colr) in enumerate(((pv, t["bar"]), (cv, t.get("hi", t["ink"]) if cv >= 0 else t["down"]))):
+                c.rect(bx + 26, bb - 12 - (1 - k) * 20, max(inner * abs(v) / mx, 3), 12, colr, 3)
+    if not items:
+        c.add(text(P, y + 40, "—", 28, t["sub"], 500))
+    footer(c, d, l, lang, P, "__PAGE__")
+    return c.svg()
+
+
+SCORE_METRICS = [("rev", "revenue"), ("gm", "gross_margin"), ("om", "operating_margin"), ("ni", "net_income"),
+                 ("eps", "eps"), ("fcf", "fcf")]
+
+
+def _seq_rows(d, l, lang, x):
+    cur, prev = cur_vals(d), prev_seq(d)
+    rows = []
+    for k, key in SCORE_METRICS:
+        cv, pv = cur.get(key), prev.get(key)
+        ch = _change(key, cv, pv, l)
+        if ch is None:
+            continue
+        thr = 0.001 if key.endswith("margin") else 0.005
+        state = "flat" if abs(ch[1]) < thr else ("better" if ch[1] > 0 else "worse")
+        rows.append((l[k], _fmt(key, pv, lang), _fmt(key, cv, lang), state, state == "better"))
+    if is_annual(d):
+        return rows, x["vs_prev_y"].format(p=prev_label(d)), x["score_better"].format(w=x["w_y"]), x["col_base_y"]
+    tr = d.get("trend") or []
+    e = tr[-2]["end"] if len(tr) > 1 else ""
+    return rows, x["vs_prev_q"].format(e=e), x["score_better"].format(w=x["w_q"]), x["col_base_q"]
+
+
+def score_sections(d, l, lang, g):
+    """[(basis, score label, base column title, rows)]; rows = (metric, base, actual, verdict key, good).
+
+    With a matching outlook the first section is actual vs that outlook (and the previous quarter follows
+    when there is room); otherwise it is actual vs the previous quarter / fiscal year."""
+    x = _lx(l, lang)
+    pri = [p for p in ((g or {}).get("prior") or {}).get("items") or [] if p.get("actual") is not None]
+    seq = _seq_rows(d, l, lang, x)
+    out = []
+    if pri and not is_annual(d):
+        rows = []
+        for it in pri[:6]:
+            lo, hi, act = it["low"], it["high"], it["actual"]
+            state = "above" if act > hi + 1e-12 else ("below" if act < lo - 1e-12 else "within")
+            good = state != "above" if it.get("lower_is_better") else state != "below"
+            rows.append((it["metric"], _grange(it, lang), _gfmt(act, it, lang), "g_" + state, good))
+        out.append((x["vs_guide"].format(p=g["prior"].get("period", "")), x["score_guide"], x["col_base_g"], rows))
+        if len(rows) <= 3 and seq[0]:
+            out.append((seq[1], seq[2], seq[3], seq[0][:6 - len(rows)]))
+        return out
+    return [(seq[1], seq[2], seq[3], seq[0])]
+
+
+def card_score(d, l, lang, t, g=None, size=None):
+    """Beat / miss scoreboard against the company's own last outlook, or else against the previous period.
+    Never against analyst consensus (there is none in the data); the card says what it compares."""
+    W, H = size or (1080, 1350)
+    P = 80
+    x = _lx(l, lang)
+    c = Card(W, H, t)
+    secs = score_sections(d, l, lang, g)
+    basis, score_lab, _, rows0 = secs[0]
+    good = sum(1 for r in rows0 if r[4])
+    y = small_header(c, d, l, x["score_t"], basis, P)
+    land, square = W > H, W == H
+    ss = 120 if not square else 96
+    sc = f"{good}/{len(rows0)}"
+    c.add(text(P - 4, y + round(ss * 0.8), sc, ss, t.get("hi", t["ink"]), 800, ls=-4))
+    lx = P + measure(sc, ss, 800, -4) + 28
+    lroom = (W - P - lx) if not land else (P + 600 - lx)
+    c.add(text(lx, y + round(ss * 0.8) - 6, clip(score_lab, lroom, 28, 700), fit(score_lab, lroom, 28, 700, floor=18), t["ink"], 700))
+    if land:   # rows on the right, score and note on the left
+        rx0, rx1, ry0 = P + 680, W - P, y - 10
+        note_x, note_w, note_y = P, 560, y + ss + 60
+    else:
+        rx0, rx1, ry0 = P, W - P, y + ss + 50
+        note_x, note_w, note_y = P, W - 2 * P, H - 168
+    rw = rx1 - rx0
+    ends = [rx0 + rw * 0.56, rx0 + rw * 0.80, rx1]
+    bottom = (H - 150) if land else note_y - 40
+    nrows = sum(len(sec[3]) for sec in secs)
+    sec_head = 56   # a later section's title line + column header
+    rh = min(96 if H <= 1350 else 128, (bottom - ry0 - 16 * len(secs) - sec_head * (len(secs) - 1)) / max(nrows, 1))
+    yy = ry0
+    for si, (sb, _, colb, rows) in enumerate(secs):
+        if si:
+            yy += 34
+            c.add(text(rx0, yy, clip(sb, rw, 20, 700), 20, t["ink"], 700))
+            yy += 22 + 14
+        c.add(text(rx0, yy, x["col_item"], 18, t["sub"], 600))
+        c.add(text(ends[0], yy, colb, 18, t["sub"], 600, "end"))
+        c.add(text(ends[1], yy, x["col_act"], 18, t["sub"], 600, "end"))
+        c.rect(rx0, yy + 14, rw, 2, t["ink"])
+        top = yy + 16
+        for i, (lab, base, act, state, ok) in enumerate(rows):
+            ry = top + i * rh
+            b = round(ry + rh / 2 + 9)
+            c.add(text(rx0, b, clip(lab, rw * 0.30, 24, 600), 24, t["ink"], 600))
+            bw = ends[0] - rx0 - rw * 0.32
+            c.add(text(ends[0], b, base, fit(base, bw, 22, 500, floor=13), t["sub"], 500, "end"))
+            c.add(text(ends[1], b, act, fit(act, ends[1] - ends[0] - 20, 24, 800, floor=14), t["ink"], 800, "end"))
+            col = t["sub"] if state == "flat" else (t["up"] if ok else t["down"])
+            psz = 18 if rh < 70 else 20
+            pill(c, ends[2], round(ry + rh / 2 - psz * 1.05), x[state], psz, col)
+            c.rect(rx0, ry + rh - 1, rw, 1, t["faint"])
+        yy = top + len(rows) * rh
+    for i, line in enumerate(wrap(x["no_consensus"], note_w, 19, 500, 4)):
+        c.add(text(note_x, note_y + i * 26, line, 19, t["sub"], 500))
+    footer(c, d, l, lang, P, "__PAGE__")
+    return c.svg()
+
+
+CARDS = {"cover": card_cover, "mix": card_mix, "guide": card_guide, "profit": card_profit, "trend": card_trend, "cash": card_cash, "wide": card_wide,
+         "poster": card_poster, "post": card_post, "income": card_income, "yoy": card_yoy, "score": card_score}
+EXTRA_CARDS = ["poster", "post", "income", "yoy", "score"]
 
 
 def page(svgs, title):
@@ -1119,6 +1703,9 @@ def render_cards(d, lang="zh", style="light", cards=None, ratio="4:5", headline=
         names.remove("mix")
     if (is_annual(d) or not (guidance and (guidance.get("next") or {}).get("items"))) and "guide" in names:
         names.remove("guide")
+    for n in ("income", "yoy"):
+        if n in names and not prev_of(d):
+            names.remove(n)
     if size[0] > size[1] and "cover" in names and "wide" in names:
         names.remove("wide")
     portrait = [n for n in names if n != "wide"]
@@ -1128,11 +1715,11 @@ def render_cards(d, lang="zh", style="light", cards=None, ratio="4:5", headline=
         CURRENT_PAGE = f"{portrait.index(name) + 1}/{len(portrait)}" if name in portrait and len(portrait) > 1 else ""
         if name == "wide":
             svg = fn(d, l, lang, t, headline)
-        elif name == "cover":
+        elif name in ("cover", "poster", "post"):
             svg = fn(d, l, lang, t, headline, size=size)
         elif name == "mix":
             svg = fn(d, l, lang, t, labels or {}, size=size)
-        elif name == "guide":
+        elif name in ("guide", "score"):
             svg = fn(d, l, lang, t, guidance, size=size)
         else:
             svg = fn(d, l, lang, t, size=size)
@@ -1147,6 +1734,7 @@ def web_render(data_json, opts_json):
     opts: lang, style (built-in name), font (auto|sans|serif|mono), bg / ink / hi (optional colours),
           handle, avatar (data URI), ratio, cards, headline, guidance, labels."""
     d, o = json.loads(data_json), json.loads(opts_json)
+    d = period_record(d, o.get("period_end"))
     custom = {"base": o.get("style") or "light", "font": o.get("font") or "auto"}
     if o.get("handle"):
         custom["handle"] = o["handle"]
@@ -1169,15 +1757,34 @@ if __name__ == "__main__":
     ap.add_argument("--lang", default="zh", choices=["zh", "en"])
     ap.add_argument("--headline", default="")
     ap.add_argument("--theme", "--style", dest="theme", default="light",
-                    help="built-in style (light/paper, dark/ink, mono, terminal, salmon, pop) or a custom style JSON file")
+                    help="built-in style (light/paper, dark/ink, mono, terminal, salmon, pop, bloomberg, keynote, neon, vintage, "
+                         "morandi, glass) or a custom style JSON file")
     ap.add_argument("--ratio", default="4:5", choices=list(RATIOS),
                     help="card shape: 4:5 portrait (default), 1:1 square, 9:16 story, 16:9 landscape")
     ap.add_argument("--cards", default="cover,mix,profit,trend,cash,guide,wide")
     ap.add_argument("--guidance", default="", help="guidance.json written by the agent from fetch_guidance.py output")
     ap.add_argument("--labels", default="", help="JSON file mapping segment labels to display names (e.g. Chinese)")
     ap.add_argument("--png", action="store_true")
+    ap.add_argument("--period", default="quarter", choices=["quarter", "annual"],
+                    help="for a docs/data/{TICKER}.json file (holds both): which report type")
+    ap.add_argument("--period-end", default="", help="pick a period by its end date (YYYY-MM-DD)")
+    ap.add_argument("--fy", default="", help="pick a period by fiscal year, e.g. 2026 (with --fq for a quarter)")
+    ap.add_argument("--fq", default="", help="fiscal quarter 1-4, with --fy")
     a = ap.parse_args()
     d = json.load(open(a.data))
+    if "quarter" in d or "annual" in d:   # a docs/data file: {"quarter": block, "annual": block}
+        if not d.get(a.period):
+            sys.exit(f"No {a.period} data in {a.data}")
+        d = d[a.period]
+    if "periods" in d:
+        full = period_record(d, a.period_end or None, a.fy or None, a.fq or None)
+        if full is None:
+            have = ", ".join(p.get("fiscal_label") or p["period_end"] for p in d["periods"])
+            sys.exit(f"No such period. Available: {have}")
+        d = full
+    elif a.period_end or a.fy:
+        sys.exit("--period-end / --fy need a multi-period file (docs/data/{TICKER}.json); "
+                 "for a fetch_sec.py file, pass the same flags to fetch_sec.py instead")
     labels = json.load(open(a.labels)) if a.labels else {}
     guidance = json.load(open(a.guidance)) if a.guidance else None
     names = [n for n in a.cards.split(",") if n]
