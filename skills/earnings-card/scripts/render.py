@@ -204,7 +204,7 @@ def recolor(t, bg=None, ink=None, hi=None, a2=None, updown=None):
         t["palette"] = pal[:1] + [hi] + pal[2:]
     if a2:
         t["a2"] = a2
-        pal = list(t.get("palette") or [t["ink"], t["hi"]])
+        pal = list(t.get("palette") or [t["ink"], t.get("hi", t["ink"])])
         t["palette"] = pal[:2] + [a2] + pal[3:] if len(pal) >= 2 else pal + [a2]
     if updown == "cn":
         t["up"], t["down"] = t["down"], t["up"]
