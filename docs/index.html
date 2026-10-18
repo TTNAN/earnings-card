@@ -3,66 +3,101 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>earnings-card · 七巨头财报卡画廊</title>
-<meta name="description" content="Mag 7 earnings cards generated from SEC filings by earnings-card, an open-source agent skill.">
-<meta property="og:title" content="earnings-card gallery">
-<meta property="og:image" content="cards/en/NVDA-7-wide.webp">
-<style>
-:root{--paper:#F3F0EA;--ink:#151515;--mute:#6F6A60;--line:#D9D3C7;--gold:#8C6A3F}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Inter","PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif}
-.wrap{max-width:1240px;margin:0 auto;padding:40px 24px 80px}
-header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:2px solid var(--ink);padding-bottom:20px;flex-wrap:wrap}
-h1{font-size:44px;line-height:1.05;margin:0;letter-spacing:-.02em}
-.sub{color:var(--mute);margin:10px 0 0;max-width:640px}
-.ctrl{display:flex;gap:10px;align-items:center}
-.seg{display:inline-flex;border:1px solid var(--ink);border-radius:999px;overflow:hidden}
-.seg button{border:0;background:none;padding:7px 16px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
-.seg button.on{background:var(--ink);color:var(--paper)}
-a.gh{font-size:14px;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:7px 14px;background:#fff8}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 8px}
-nav a{font-weight:600;font-size:14px;color:var(--ink);text-decoration:none;padding:6px 12px;border-radius:8px;background:#fff6;border:1px solid var(--line)}
-nav a:hover{border-color:var(--ink)}
-section{padding-top:36px}
-.co{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
-.co h2{margin:0;font-size:28px}.co span{color:var(--mute);font-size:14px}
-.co p{flex-basis:100%;margin:2px 0 14px;font-size:18px;font-weight:600}
-.row{display:flex;gap:14px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory}
-.row img{height:360px;width:auto;border-radius:10px;box-shadow:0 1px 0 var(--line),0 8px 24px #0000000f;cursor:zoom-in;scroll-snap-align:start;background:#fff;flex:none}
-.row img.wide{height:360px}
-#lb{position:fixed;inset:0;background:#151515e6;display:none;align-items:center;justify-content:center;z-index:9;cursor:zoom-out}
-#lb img{max-width:94vw;max-height:92vh;border-radius:8px}
-footer{margin-top:56px;border-top:1px solid var(--line);padding-top:18px;color:var(--mute);font-size:13px}
-footer code{background:#fff;padding:2px 6px;border-radius:4px}
-@media(max-width:640px){h1{font-size:32px}.row img,.row img.wide{height:260px}}
-</style>
+<title>earnings-card · 财报卡生成器</title>
+<meta name="description" content="输入美股代码，选季报或年报、风格、比例和水印，在浏览器里即时生成财报卡。数据来自 SEC EDGAR。Type a US ticker and get shareable earnings cards instantly.">
+<meta property="og:title" content="earnings-card · 财报卡生成器">
+<meta property="og:description" content="Type a ticker, get a set of earnings cards from SEC filings. Free, open source, runs in your browser.">
+<meta property="og:image" content="https://ttnan.github.io/earnings-card/gallery/cards/en/NVDA-7-wide.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- the card fonts: canvas measures with them, the preview draws with them, PNG export embeds subsets of them -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&family=Source+Serif+4:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div class="wrap">
-<header>
- <div><h1 id="t"></h1><p class="sub" id="s"></p></div>
- <div class="ctrl"><div class="seg"><button data-l="zh">中文</button><button data-l="en">EN</button></div><a class="gh" href="https://github.com/TTNAN/earnings-card">★ GitHub</a></div>
+<header class="top">
+  <a class="brand" href="./"><b>earnings-card</b><span data-i="brand"></span></a>
+  <nav>
+    <a href="gallery/" data-i="gallery"></a>
+    <a href="https://github.com/TTNAN/earnings-card" target="_blank" rel="noopener">GitHub</a>
+    <div class="seg small" id="uilang"><button data-v="zh">中文</button><button data-v="en">EN</button></div>
+  </nav>
 </header>
-<nav id="nav"></nav>
-<main id="m"></main>
-<footer id="f"></footer>
+
+<div class="app">
+  <aside class="panel" id="panel">
+    <h1 data-i="title"></h1>
+    <p class="lede" data-i="lede"></p>
+
+    <label class="field">
+      <span data-i="ticker"></span>
+      <div class="ac">
+        <input id="ticker" autocomplete="off" spellcheck="false" maxlength="12" value="NVDA">
+        <ul id="sugg" role="listbox" hidden></ul>
+      </div>
+      <small id="coverage" class="hint"></small>
+    </label>
+
+    <div class="field"><span data-i="period"></span>
+      <div class="seg" id="period"><button data-v="quarter" data-i="quarter"></button><button data-v="annual" data-i="annual"></button></div>
+    </div>
+
+    <div class="field"><span data-i="ratio"></span>
+      <div class="seg" id="ratio"><button data-v="4:5">4:5</button><button data-v="1:1">1:1</button><button data-v="9:16">9:16</button><button data-v="16:9">16:9</button></div>
+      <small class="hint" id="ratiohint"></small>
+    </div>
+
+    <div class="field"><span data-i="style"></span>
+      <div class="swatches" id="styles"></div>
+    </div>
+
+    <details class="field" id="custom">
+      <summary data-i="customColors"></summary>
+      <div class="colors">
+        <label><input type="checkbox" data-c="bg"><span data-i="cBg"></span><input type="color" id="c-bg"></label>
+        <label><input type="checkbox" data-c="ink"><span data-i="cInk"></span><input type="color" id="c-ink"></label>
+        <label><input type="checkbox" data-c="hi"><span data-i="cHi"></span><input type="color" id="c-hi"></label>
+      </div>
+    </details>
+
+    <div class="field"><span data-i="font"></span>
+      <div class="seg" id="font"><button data-v="auto" data-i="fAuto"></button><button data-v="sans" data-i="fSans"></button><button data-v="serif" data-i="fSerif"></button><button data-v="mono" data-i="fMono"></button></div>
+    </div>
+
+    <div class="field"><span data-i="cardLang"></span>
+      <div class="seg" id="lang"><button data-v="zh">中文</button><button data-v="en">English</button></div>
+    </div>
+
+    <label class="field"><span data-i="headline"></span>
+      <input id="headline" maxlength="60" data-ph="headlinePh">
+      <small class="hint" data-i="headlineHint"></small>
+    </label>
+
+    <div class="field"><span data-i="watermark"></span>
+      <div class="wm">
+        <input id="handle" maxlength="40" data-ph="handlePh">
+        <label class="avatar" id="avatarBtn" title=""><input type="file" id="avatar" accept="image/*" hidden><img id="avatarImg" alt="" hidden><span data-i="avatar"></span></label>
+        <button class="link" id="avatarClear" hidden data-i="remove"></button>
+      </div>
+    </div>
+
+    <div class="field"><span data-i="cards"></span>
+      <div class="checks" id="cards"></div>
+    </div>
+  </aside>
+
+  <main class="preview">
+    <div class="bar">
+      <div id="meta" class="meta"></div>
+      <button class="primary" id="zip" disabled data-i="downloadAll"></button>
+    </div>
+    <div id="status" class="status"><div class="spinner"></div><p id="statusText"></p></div>
+    <div id="grid" class="grid"></div>
+    <footer class="foot" data-i="foot"></footer>
+  </main>
 </div>
-<div id="lb"><img alt=""></div>
-<script src="data.js"></script>
-<script>
-const T={zh:{t:"七巨头财报卡画廊",s:"苹果、微软、谷歌、亚马逊、英伟达、Meta、特斯拉最新一季财报，每家一整套卡片，全部由 earnings-card 从 SEC 官方财报自动生成。点图放大，横向滑动看全套。",f:"数据来自 SEC EDGAR（GAAP 口径），不构成投资建议。自己生成：在 Claude Code / Codex 里装上 skill，说一句「给 NVDA 做一套财报卡」。 <code>npx skills add TTNAN/earnings-card</code>",lang:"zh-CN"},
-en:{t:"Mag 7 earnings cards",s:"The latest quarter for Apple, Microsoft, Alphabet, Amazon, NVIDIA, Meta and Tesla, one full set each, all generated by earnings-card from official SEC filings. Click to enlarge, scroll sideways for the whole set.",f:"Data from SEC EDGAR (GAAP). Not investment advice. Make your own: install the skill in Claude Code or Codex and say \"Make an earnings card for NVDA\". <code>npx skills add TTNAN/earnings-card</code>",lang:"en"}};
-const E=window.EC,order=["NVDA","MSFT","AAPL","GOOGL","AMZN","META","TSLA"];
-function draw(l){
- document.documentElement.lang=T[l].lang;t.textContent=T[l].t;s.textContent=T[l].s;f.innerHTML=T[l].f;
- document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.l==l));
- nav.innerHTML=order.map(k=>`<a href="#${k}">${k}</a>`).join('');
- m.innerHTML=order.map(k=>`<section id="${k}"><div class="co"><h2>${k}</h2><span>${E.co[k]} · ${E.fl[k]}</span><p>${E.heads[l][k]||''}</p></div><div class="row">${E.cards[l][k].map(x=>`<img loading="lazy" class="${/wide/.test(x)?'wide':''}" src="cards/${l}/${x}" alt="${k} ${x}">`).join('')}</div></section>`).join('');
- localStorage.ecl=l;
-}
-document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>draw(b.dataset.l));
-m.onclick=e=>{if(e.target.tagName=='IMG'){lb.querySelector('img').src=e.target.src;lb.style.display='flex'}};
-lb.onclick=()=>lb.style.display='none';document.onkeydown=e=>{if(e.key=='Escape')lb.style.display='none'};
-draw(new URLSearchParams(location.search).get('lang')||localStorage.ecl||(navigator.language.startsWith('zh')?'zh':'en'));
-</script>
+
+<script src="app.js"></script>
 </body>
 </html>

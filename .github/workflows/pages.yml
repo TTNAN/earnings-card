@@ -1,9 +1,9 @@
-name: gallery
+name: pages
 on:
   push:
     branches: [main]
-    paths: ["docs/**", ".github/workflows/pages.yml"]
-  workflow_dispatch:
+    paths: ["docs/**", "skills/earnings-card/scripts/render.py", ".github/workflows/pages.yml"]
+  workflow_dispatch:   # also started by the nightly data job after it commits new data
 permissions:
   contents: read
   pages: write
@@ -19,9 +19,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # docs/py/render.py is a symlink to the skill's render.py (one source of truth): copy real files.
+      - name: Build site
+        run: |
+          cp -rL docs _site
+          test -s _site/py/render.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
