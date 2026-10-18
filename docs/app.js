@@ -4,6 +4,7 @@
  * Data is precomputed nightly from SEC EDGAR into data/ (the browser can't call SEC directly). */
 "use strict";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+const LOCAL_PYODIDE = new URL("pyodide/", location.href).href;
 const CARD_ORDER = ["cover", "mix", "profit", "trend", "cash", "guide", "wide"];
 const STYLES = [
   {id: "light", zh: "杂志米白", en: "Paper", bg: "#F4F1EA", ink: "#151515", hi: "#8C6A3F"},
@@ -492,8 +493,18 @@ async function boot() {
   const listP = getJSON("data/tickers.json").then(l => { tickers = l; $("#coverage").textContent = tr().coverage(l.length); }).catch(() => {});
   getJSON("data/labels-zh.json").then(l => { labelsZh = l; }).catch(() => { labelsZh = {}; });
   try {
-    await new Promise((ok, no) => { const s = document.createElement("script"); s.src = PYODIDE + "pyodide.js"; s.onload = ok; s.onerror = () => no(new Error("pyodide.js")); document.head.appendChild(s); });
-    const [pyo, src] = await Promise.all([loadPyodide({indexURL: PYODIDE}), fetch("py/render.py").then(r => { if (!r.ok) throw new Error("render.py " + r.status); return r.text(); })]);
+    let pyo, src, lastErr;
+    const srcP = fetch("py/render.py").then(r => { if (!r.ok) throw new Error("render.py " + r.status); return r.text(); });
+    for (const base of [PYODIDE, LOCAL_PYODIDE]) {          // CDN first, then the copy in this repo
+      try {
+        if (base !== PYODIDE) { try { delete window.loadPyodide; delete window._createPyodideModule; } catch (e) {} }
+        await new Promise((ok, no) => { const s = document.createElement("script"); s.src = base + "pyodide.js"; s.onload = ok; s.onerror = () => no(new Error("pyodide.js")); document.head.appendChild(s); });
+        pyo = await Promise.race([loadPyodide({indexURL: base}), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 45000))]);
+        break;
+      } catch (e) { console.warn("pyodide from", base, "failed:", e); lastErr = e; pyo = null; }
+    }
+    if (!pyo) throw lastErr;
+    src = await srcP;
     py = pyo;
     py.FS.writeFile("/home/pyodide/render.py", src);
     py.globals.set("js_measure", measureText);
