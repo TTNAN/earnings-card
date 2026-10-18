@@ -24,7 +24,7 @@ from datetime import date
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "skills", "earnings-card", "scripts"))
-os.environ.setdefault("SEC_USER_AGENT", "earnings-card (github.com/TTNAN/earnings-card) thnssssss7@gmail.com")
+os.environ.setdefault("SEC_USER_AGENT", "earnings-card thnssssss7@gmail.com")
 import fetch_sec  # noqa: E402
 
 OUT = os.path.join(ROOT, "docs", "data")
