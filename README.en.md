@@ -115,7 +115,7 @@ python3 render.py nvda.json --out NVDA --headline "Revenue doubled, margins held
 | Option | What it does |
 |---|---|
 | `--lang en\|zh` | English or Chinese cards |
-| `--theme light\|dark` | Warm paper or ink black |
+| `--style light\|dark\|mono\|terminal\|salmon\|pop` or `my-style.json` | Six built-in styles, or your own colors, font and watermark |
 | `--cards cover,mix,profit,trend,cash,guide,wide` | Pick the cards you want |
 | `--guidance guidance.json` | Add the guidance card (the agent writes this from the earnings release) |
 | `--labels labels.json` | Rename segments, e.g. into Chinese |

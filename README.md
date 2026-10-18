@@ -115,7 +115,7 @@ python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利�
 | 参数 | 作用 |
 |---|---|
 | `--lang en\|zh` | 英文或中文 |
-| `--theme light\|dark` | 暖白纸感或墨黑 |
+| `--style light\|dark\|mono\|terminal\|salmon\|pop` 或 `my-style.json` | 六种内置风格，或你自己的配色、字体、水印 |
 | `--cards cover,mix,profit,trend,cash,guide,wide` | 选择要哪几张 |
 | `--guidance guidance.json` | 加上指引卡（Agent 从财报新闻稿里整理） |
 | `--labels labels.json` | 给分部改名，比如翻成中文 |
