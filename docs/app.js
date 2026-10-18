@@ -13,10 +13,10 @@ const STYLES = [
   {id: "light", zh: "杂志米白", en: "Paper", bg: "#F4F1EA", ink: "#151515", hi: "#8C6A3F"},
   {id: "dark", zh: "墨黑", en: "Ink", bg: "#121212", ink: "#F2EFE8", hi: "#D9A65E"},
   {id: "mono", zh: "极简黑白", en: "Swiss", bg: "#FFFFFF", ink: "#000000", hi: "#E10600"},
-  {id: "terminal", zh: "终端", en: "Terminal", bg: "#0A0A0A", ink: "#FFB000", hi: "#33C7FF"},
+  {id: "terminal", zh: "终端", en: "Terminal", bg: "#0A0A0A", ink: "#FFB000", hi: "#33C7FF", tint: "#FFB000"},
   {id: "salmon", zh: "财经报纸", en: "Salmon", bg: "#FFF1E5", ink: "#33302E", hi: "#0D7680"},
   {id: "pop", zh: "小红书色块", en: "Pop", bg: "#FFF5F3", ink: "#1B1B1B", hi: "#FF2442"},
-  {id: "bloomberg", zh: "彭博橙", en: "Bloomberg", bg: "#000000", ink: "#FB8B1E", hi: "#4AA3FF"},
+  {id: "bloomberg", zh: "彭博橙", en: "Bloomberg", bg: "#000000", ink: "#FB8B1E", hi: "#4AA3FF", tint: "#FB8B1E"},
   {id: "keynote", zh: "苹果发布会", en: "Keynote", bg: "#000000", ink: "#F5F5F7", hi: "#2997FF"},
   {id: "neon", zh: "赛博霓虹", en: "Neon", bg: "#0D0A1A", ink: "#22E4FF", hi: "#FF3DCB"},
   {id: "vintage", zh: "复古报纸", en: "Vintage", bg: "#EFE4C8", ink: "#2B2118", hi: "#9E2B1F"},
@@ -36,7 +36,8 @@ const GFONTS = {
   "Inter": "Inter", "Noto Sans SC": "Noto+Sans+SC", "Source Serif 4": "Source+Serif+4",
   "Noto Serif SC": "Noto+Serif+SC", "JetBrains Mono": "JetBrains+Mono",
 };
-const WEIGHTS = [400, 500, 600, 700, 800];
+const WEIGHTS = [400, 500, 600, 700, 800, 900];   // 900: hero figures and the serif cover headline
+const fontWeights = f => f === "JetBrains Mono" ? WEIGHTS.filter(w => w <= 800) : WEIGHTS;   // Google serves Mono up to 800
 const SECTORS = {
   zh: {tech: "信息技术", comm: "通信服务", disc: "可选消费", staples: "必需消费", health: "医疗保健", fin: "金融",
     ind: "工业", energy: "能源", util: "公用事业", re: "房地产", materials: "原材料", other: "其他"},
@@ -205,6 +206,29 @@ function lum(hex) {
   return 0.2126 * f(v[0]) + 0.7152 * f(v[1]) + 0.0722 * f(v[2]);
 }
 function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+function mixHex(a, b, w) {
+  const p = h => [0, 2, 4].map(i => parseInt(h.replace("#", "").slice(i, i + 2), 16));
+  const x = p(a), y = p(b);
+  return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * w).toString(16).padStart(2, "0")).join("");
+}
+// The page takes on a whisper of the chosen style: its accent drives the solid buttons and the selected
+// states, and the paper shifts a few percent toward it. The accent is darkened until white text on it
+// passes AA (4.5:1); the paper keeps body and secondary text at AA too.
+const PAPER = "#F3F0EA", MUTE = "#6F6A60";
+function applyTint() {
+  const st = STYLES.find(x => x.id === S.style) || STYLES[0];
+  let acc = (S.colorOn.hi && S.colors.hi) || st.tint || st.hi;
+  for (let i = 0; i < 24 && contrast(acc, "#ffffff") < 4.6; i++) acc = mixHex(acc, "#000000", 0.07);
+  let w = 0.09, paper = mixHex(PAPER, acc, w);
+  while (w > 0 && contrast(paper, MUTE) < 4.5) { w -= 0.01; paper = mixHex(PAPER, acc, Math.max(w, 0)); }
+  const r = document.documentElement.style;
+  r.setProperty("--accent", acc);
+  r.setProperty("--accent-soft", mixHex(paper, acc, 0.14));
+  r.setProperty("--paper", paper);
+  r.setProperty("--stage", mixHex(paper, "#ffffff", 0.55));
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.content = paper;
+}
 
 // ---------- toast ----------
 let toastT = null;
@@ -668,7 +692,7 @@ async function onWorker(m) {
   requestExtras();
   watchJump();
   // Web fonts load lazily (Chinese fonts in slices): once the glyphs on these cards are in, measure again.
-  if (await ensureFonts(rendered) && fontPass < 3) { fontPass++; sendTables(); render(true); }
+  if (await ensureFonts(rendered) && fontPass < 3) { fontPass++; await sendTables(); render(true); }
 }
 
 // ---------- caption + headline ideas ----------
@@ -744,11 +768,10 @@ async function ensureFonts(cards) {
   const fams = new Set();
   cards.forEach(c => familiesIn(c.svg).forEach(f => fams.add(f)));
   const specs = [];
-  for (const f of fams) for (const w of WEIGHTS) specs.push(`${w} 20px "${f}"`);
+  for (const f of fams) for (const w of fontWeights(f)) specs.push(`${w} 20px "${f}"`);
   const missing = specs.filter(s => { try { return !document.fonts.check(s, text); } catch (e) { return false; } });
-  if (!missing.length) return false;
-  await Promise.all(missing.map(s => document.fonts.load(s, text).catch(() => null)));
-  return true;
+  if (missing.length) await Promise.all(missing.map(s => document.fonts.load(s, text).catch(() => null)));
+  return missing.length > 0 || loadedFaces() > tableFaces;   // new faces since the width tables: measure again
 }
 // Width tables for the worker: every char we expect, at 100px, per (font stack as render.py passes it, weight).
 // Any other char >= U+2E80 uses the width of 中; anything else unlisted uses the width of n.
@@ -771,7 +794,22 @@ function buildTables() {
   }
   return t;
 }
-function sendTables() { engine && engine.postMessage({type: "tables", tables: buildTables()}); }
+// Canvas measureText doesn't wait for a web font: a weight that isn't loaded yet measures in a fallback face
+// (and only starts loading). So load every face the tables use first, and remember how many faces were
+// loaded when the tables were built: ensureFonts re-measures whenever more have loaded since.
+let tableFaces = -1;
+const loadedFaces = () => document.fonts ? [...document.fonts].filter(f => f.status === "loaded").length : 0;
+async function loadTableFonts() {
+  if (!document.fonts) return;
+  const sample = TABLE_CHARS.join("") + "中";
+  await Promise.all(families.flatMap(fam => TABLE_WEIGHTS.map(w => document.fonts.load(`${w} 100px ${fam}`, sample).catch(() => null))));
+}
+async function sendTables() {
+  if (!engine) return;
+  await loadTableFonts();
+  tableFaces = loadedFaces();
+  engine.postMessage({type: "tables", tables: buildTables()});
+}
 
 // Subset the fonts to exactly the characters on the cards and embed them, so the PNG matches the preview.
 const fontCssCache = {};
@@ -782,7 +820,7 @@ async function embeddedFontCSS(cards) {
   const parts = await Promise.all([...fams].map(async f => {
     const key = f + "|" + chars;
     if (!fontCssCache[key]) fontCssCache[key] = (async () => {
-      const url = `https://fonts.googleapis.com/css2?family=${GFONTS[f]}:wght@${WEIGHTS.join(";")}&text=${encodeURIComponent(chars)}`;
+      const url = `https://fonts.googleapis.com/css2?family=${GFONTS[f]}:wght@${fontWeights(f).join(";")}&text=${encodeURIComponent(chars)}`;
       let css = await (await fetch(url)).text();
       const urls = [...new Set([...css.matchAll(/url\((https:[^)]+)\)/g)].map(m => m[1]))];
       const datas = await Promise.all(urls.map(async u => blobToDataURL(await (await fetch(u)).blob())));
@@ -952,6 +990,7 @@ function setupSteps() {
   document.querySelectorAll(".step").forEach(d => d.addEventListener("toggle", drawSummaries));
 }
 function drawSummaries() {
+  applyTint();
   const t = tr(), st = STYLES.find(x => x.id === S.style), c = current && current.data;
   const s1 = $("#sum1"), s2 = $("#sum2"), s3 = $("#sum3");
   if (!s1) return;
@@ -1074,7 +1113,7 @@ async function bootEngine() {
   clearInterval(bootTick);
   bootStage = "fonts"; showBoot();
   await (document.fonts ? document.fonts.ready : Promise.resolve());
-  sendTables();
+  await sendTables();
   if (dataCache[S.ticker]) schedule(0);
   else if (!$("#status").classList.contains("err")) status(tr().fLoading(S.ticker), false, true);
 }
