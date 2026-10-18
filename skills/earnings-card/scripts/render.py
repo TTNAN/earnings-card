@@ -567,14 +567,14 @@ def footer(c, d, l, lang, P, page=None):
     handle = t.get("handle")
     brand = (f"{handle} · " if handle else "") + "earnings-card"
     pg = CURRENT_PAGE if CURRENT_PAGE else ""
-    fs = 15
-    pw = measure(pg, fs, 600) + 12 if pg else 0
-    bw = measure(brand, fs, 500)
+    fs = 13
+    pw = measure(pg, fs, 500) + 16 if pg else 0
+    bw = measure(brand, fs, BODY_W)
     left = f'{l["note"]} · {filing}'
     room = c.w - 2 * P - bw - pw - (32 if t.get("avatar") else 0) - 28
     c.add(text(P, fy, left, fit(left, room, fs, BODY_W, floor=11), t["sub"], BODY_W))   # long handles shrink the left note
     if pg:
-        c.add(text(c.w - P, fy, pg, fs, t["ink"], 600, "end"))
+        c.add(text(c.w - P, fy, pg, fs, _mix(t["ink"], t["sub"], 0.4), 500, "end"))
     c.add(text(c.w - P - pw, fy, brand, fs, t["sub"], BODY_W, "end"))
     if t.get("avatar"):
         ax = c.w - P - pw - bw - 20
@@ -649,7 +649,7 @@ def _num_layout(s, size, weight, ls):
     the unit smaller, so 亿 (a full-width glyph) doesn't outweigh the digits and zh / en figures read the
     same size. gap_after tucks the next part in against the digits' side bearing."""
     p = num_parts(s)
-    if not p or size < 34:
+    if not p or size < 24:
         return [(str(s), size, weight, ls, 0)]
     pre, digits, unit_ = p
     out = []
@@ -658,7 +658,7 @@ def _num_layout(s, size, weight, ls):
     gap = 0
     if unit_:
         cjk = ord(unit_[0]) > 0x2E80
-        gap = size * (0.01 if cjk else 0.025)
+        gap = size * (0.01 if cjk else 0.025) - ls + (3 if size < 80 else 0)   # -ls: undo the tracking; +3: small figures render a hair wider in cairo
     out.append((digits, size, weight, ls, gap))
     if unit_:
         us = round(size * (0.6 if cjk else 0.68))
@@ -666,9 +666,17 @@ def _num_layout(s, size, weight, ls):
     return out
 
 
+def _num_ls(size):
+    """Tracking for figures: tight, and tighter still for the hero sizes (cover / poster / cash), so the big
+    figure sets solid like a magazine-cover number. Monospace only a little."""
+    if FONT == MONO:
+        return round(-size / 70, 1)
+    return round(-size / (21 if size >= 90 else 28), 1)
+
+
 def num_measure(s, size, weight=None, ls=None):
     weight = weight or HERO_W
-    ls = round(-size / (70 if FONT == MONO else 28), 1) if ls is None else ls
+    ls = _num_ls(size) if ls is None else ls
     return sum(measure(p, sz, w, l_) + g for p, sz, w, l_, g in _num_layout(s, size, weight, ls))
 
 
@@ -682,7 +690,7 @@ def num(x, y, s, size, fill, weight=None, anchor="start", ls=None):
     """A hero / metric figure: heavy grotesque, tight tracking, smaller currency sign and unit (each its own
     <text>, so every element keeps one font size). Returns svg; the width is num_measure()."""
     weight = weight or HERO_W
-    ls = round(-size / (70 if FONT == MONO else 28), 1) if ls is None else ls
+    ls = _num_ls(size) if ls is None else ls
     parts = _num_layout(s, size, weight, ls)
     wd = num_measure(s, size, weight, ls)
     if anchor == "end":
@@ -783,6 +791,67 @@ def cell_delta(c, x, y, delta, size, max_w=None, anchor="start"):
     change(c, x, y, v, good, sz, lab, anchor)
 
 
+# ---------- table rows: a big value with small secondary notes (mix, waterfall) ----------
+META_GAP = 0.9   # em between the parts of a secondary line
+
+
+def meta_measure(parts, size):
+    """Width of a secondary line. parts: ("txt", s) muted note, or ("chg", s, good, label) a small change mark."""
+    w = sum(measure(p[1], size, BODY_W) if p[0] == "txt" else change_measure(p[1], size, p[3], 600) for p in parts)
+    return w + size * META_GAP * max(len(parts) - 1, 0)
+
+
+def meta(c, x_right, y, parts, size):
+    """The secondary line of a table row, right-aligned at x_right: share notes in the muted secondary colour,
+    the change mark small and at 600 (still ▲▼ + up / down colour) so the amount above / beside it leads."""
+    x = x_right - meta_measure(parts, size)
+    for p in parts:
+        if p[0] == "txt":
+            c.add(text(round(x, 1), y, p[1], size, c.t["sub"], BODY_W))
+            x += measure(p[1], size, BODY_W)
+        else:
+            x += change(c, x, y, p[1], p[2], size, p[3], weight=600)
+        x += size * META_GAP
+
+
+def meta_options(share, share_long, yoy, yoy_label):
+    """Richest-first variants of a row's secondary line ("占比 51%" / "51%", YoY with / without its label);
+    callers take the first that leaves the row's name room."""
+    out = []
+    for sl, yl in ((share_long, yoy_label), (None, yoy_label), (None, None)):
+        parts = []
+        if share is not None:
+            parts.append(("txt", sl or share))
+        if yoy is not None:
+            parts.append(("chg", pct(yoy), yoy >= 0, yl))
+        if parts and parts not in out:
+            out.append(parts)
+    return out or [[]]
+
+
+def row_value(c, x_right, base, amount, asize, parts, msize, stacked, weight=None):
+    """A table row's value: the amount as a hero-style figure (num(): heavy, tight, small $ and unit) with the
+    secondary line under it (stacked) or to its left on the same baseline. Returns the block's width."""
+    aw = num_measure(amount, asize, weight)
+    c.add(num(x_right, base, amount, asize, c.t["ink"], weight, "end"))
+    if not parts:
+        return aw
+    mw = meta_measure(parts, msize)
+    if stacked:
+        meta(c, x_right, round(base + msize + 12), parts, msize)
+        return max(aw, mw)
+    meta(c, x_right - aw - msize * 1.1, base, parts, msize)
+    return aw + msize * 1.1 + mw
+
+
+def row_value_width(amount, asize, parts, msize, stacked, weight=None):
+    aw = num_measure(amount, asize, weight)
+    if not parts:
+        return aw
+    mw = meta_measure(parts, msize)
+    return max(aw, mw) if stacked else aw + msize * 1.1 + mw
+
+
 def draw_cell(c, x, y, w, h, lab, val, delta, vsize=54):
     t = c.t
     c.box(x, y, w, h, 14)
@@ -864,6 +933,14 @@ def bars(c, x, y, w, h, vals, labels, lang, highlight_last=True, label_fn=None):
         if v < 0 and not last:
             col = _mix(t["down"], t["bg"], 0.35)
         by = zero - bh if v >= 0 else zero
+        if last and v >= 0 and bh > 12:
+            if _lum(t["bg"]) > 0.4:   # paper: the latest bar lifts off the page on a soft offset shadow
+                sd = min(5, gap * 0.4)
+                c.rect(bx + sd, by + sd, bw, bh - sd, t["ink"], 2, 'fill-opacity="0.16"')
+            else:                     # dark pages: a hairline frame a few px out instead (a shadow wouldn't show)
+                o = min(4, gap * 0.35)
+                c.rect(bx - o, by - o, bw + 2 * o, bh + o, "none", 3,
+                       f'stroke="{col}" stroke-width="1" stroke-opacity="0.45"')
         c.rect(bx, by, bw, bh, col, 2)
         if i in (0, n - 1):
             ly = by - 12 if v >= 0 else zero - 12
@@ -953,7 +1030,7 @@ def card_cover(d, l, lang, t, headline, size=None):
     hs = 60 if square else 80
     lines, hs = hero_headline(c, P, ry + 34 + hs + e * 4 // 100, cover_headline(d, lang, headline), W - 2 * P, hs)
     y = ry + 34 + hs + round(hs * 1.14) * (len(lines) - 1) + 66 + e * 6 // 100
-    base = hero_block(c, P, y + 8, l, d, lang, W, 112 if square else 132, 26 if square else 30, right=W - P)
+    base = hero_block(c, P, y + 8, l, d, lang, W, 112 if square else 132, 24 if square else 27, right=W - P)
     # metric boxes sit on the footer; the bars take what is left in between
     foot = H - 92
     if square:
@@ -1024,10 +1101,24 @@ def card_profit(d, l, lang, t, size=None):
 
     avail = H - 140 - y
     rh = min(92 if H <= 1350 else 92 * H // 1350, avail / max(len(rows), 1))
-    tight = rh < 66   # 1:1 and 16:9: one line per row, share of revenue beside the amount
-    fs = (22, 20, 24, 21) if tight else (26, 23, 28, 24)   # label total/step, value total/step
-    label_w = max(measure(r[0], fs[0], 700) for r in rows) + 36
-    val_w = 270 if tight else 210
+    tight = rh < 66   # 1:1 and 16:9: one line per row, the secondary notes beside the amount
+    lsz = (22, 20) if tight else (26, 23)   # label total / step
+    asz = (30, 25) if tight else (38, 31)   # amount total / step (hero-style figures)
+    msz = 15 if tight else 17
+    yoys = {l["rev"]: d.get("revenue_yoy"), l["ni"]: d.get("net_income_yoy")}
+
+    def vals(lab, v, kind):
+        total = kind == "total"
+        vs = money(v, lang) if total else ("−" if v < 0 else "+") + money(abs(v), lang)
+        sh = None if lab == l["rev"] else f"{abs(v)/rev*100:.1f}%"   # revenue is 100% of itself
+        opts = meta_options(sh, sh and f'{sh} {l["of_rev"]}', yoys.get(lab) if total else None, l["yoy"])
+        return vs, (opts[-1] if tight else opts[0])
+
+    label_w = max(measure(r[0], lsz[0], 700) for r in rows) + 36
+    val_w = max(row_value_width(*(lambda vs, pt: (vs, asz[0 if k == "total" else 1], pt, msz, not tight,
+                                                    HERO_W if k == "total" else 800))(*vals(lab, v, k)))
+                for lab, v, k in rows) + 32
+    val_w = max(val_w, 200)
     bx0, bw_max = P + label_w, W - 2 * P - label_w - val_w
     scale = bw_max / max(rev, 1)
     level = 0
@@ -1046,20 +1137,14 @@ def card_profit(d, l, lang, t, size=None):
             x0, x1 = bx0 + min(level, new) * scale, bx0 + max(level, new) * scale
             col = cool if v < 0 else t["up"]   # costs a cool grey, the odd positive item in the up colour
             level = new
-        vs = money(v, lang) if total else ("−" if v < 0 else "+") + money(abs(v), lang)
-        share = f'{abs(v)/rev*100:.1f}% {l["of_rev"]}'
-        if tight:
-            ty = round(ry + rh * 0.5 + 8, 1)
-            c.add(text(P, ty, lab, fs[0] if total else fs[1], t["ink"] if total else t["sub"], 700 if total else BODY_W))
-            c.rect(x0, ry + rh * 0.2, max(x1 - x0, 3), rh * 0.6, col, 2)
-            vsz, vw = (fs[2], 800) if total else (fs[3], 600)
-            c.add(text(W - P, ty, vs, vsz, t["ink"], vw, "end"))
-            c.add(text(W - P - measure(vs, vsz, vw) - 12, ty, f'{abs(v)/rev*100:.1f}%', 16, t["sub"], BODY_W, "end"))
-        else:
-            c.add(text(P, ry + rh * 0.5 + 9, lab, 26 if total else 23, t["ink"] if total else t["sub"], 700 if total else BODY_W))
-            c.rect(x0, ry + rh * 0.18, max(x1 - x0, 3), rh * 0.64, col, 2)
-            c.add(text(W - P, ry + rh * 0.5 + 2, vs, 28 if total else 24, t["ink"], 800 if total else 600, "end"))
-            c.add(text(W - P, ry + rh * 0.5 + 28, share, 16, t["sub"], BODY_W, "end"))
+        vs, parts = vals(lab, v, kind)
+        a_ = asz[0 if total else 1]
+        base = round(ry + rh / 2 + a_ * 0.36 - (0 if tight else msz * 0.6 + 6))
+        bh = 0.6 if tight else 0.64
+        c.rect(x0, ry + rh * (1 - bh) / 2, max(x1 - x0, 3), rh * bh, col, 2)
+        c.add(text(P, round(ry + rh / 2 + lsz[0] * 0.36), lab, lsz[0] if total else lsz[1],
+                   t["ink"] if total else t["sub"], 700 if total else BODY_W))
+        row_value(c, W - P, base, vs, a_, parts, msz, not tight, HERO_W if total else 800)
         if total and i < len(rows) - 1:
             c.rect(x1 - 1, ry + rh * 0.82, 1.5, rh * 0.36, t["faint"])
     footer(c, d, l, lang, P, "__PAGE__")
@@ -1090,11 +1175,11 @@ def line_chart(c, x, y, w, h, series, labels, lang):
         pts = [(px(i), py(v)) for i, v in enumerate(vs) if v is not None]
         if len(pts) < 2:
             continue
-        sw = 5 if k == 0 else 4.5
+        sw = 6 if k == 0 else 5.5
         c.add(f'<polyline points="{" ".join(f"{a:.1f},{b:.1f}" for a, b in pts)}" fill="none" stroke="{col}" '
               f'stroke-width="{sw}" stroke-linejoin="round" stroke-linecap="round"/>')
         a, b = pts[-1]
-        c.add(f'<circle cx="{a:.1f}" cy="{b:.1f}" r="10" fill="{col}"/>')
+        c.add(f'<circle cx="{a:.1f}" cy="{b:.1f}" r="12" fill="{col}"/>')
         a0, b0 = pts[0]
         c.add(f'<circle cx="{a0:.1f}" cy="{b0:.1f}" r="4.5" fill="{col}"/>')
         vals = [v for v in vs if v is not None]
@@ -1111,9 +1196,9 @@ def line_chart(c, x, y, w, h, series, labels, lang):
         for i in range(len(ends) - 2, -1, -1):
             ends[i][0] = min(ends[i][0], ends[i + 1][0] - gap)
     for ly, a, dy, name, v, col in ends:
-        lx = a + 18
+        lx = a + 20
         if abs((ly - 9) - dy) > 6:   # moved away from its dot: a hairline leader
-            c.add(f'<polyline points="{a + 11:.1f},{dy:.1f} {lx - 4:.1f},{ly - 12:.1f}" fill="none" stroke="{col}" stroke-width="1.2"/>')
+            c.add(f'<polyline points="{a + 13:.1f},{dy:.1f} {lx - 4:.1f},{ly - 12:.1f}" fill="none" stroke="{col}" stroke-width="1.2"/>')
         c.add(text(lx, ly - 2, f"{v*100:.1f}%", 26, col, 800))
         c.add(text(lx, ly + 20, name, 15, t["sub"], BODY_W))
     for i in (0, n - 1):
@@ -1194,10 +1279,10 @@ def card_cash(d, l, lang, t, size=None):
         colw = 820 if land else W - 2 * P
         c.add(text(P, y + 10, l["fcf"], 22, t["sub"], BODY_W))
         fv = money(fcf, lang)
-        pw = change_measure(pct(fy), 26, l["yoy"]) if show_pill else 0
+        pw = change_measure(pct(fy), 24, l["yoy"]) if show_pill else 0
         c.add(num(P - 4, y + 104, fv, num_fit(fv, colw - pw - 40, 92), fcol))
         if show_pill:
-            change(c, P + colw, y + 98, pct(fy), fy >= 0, 26, l["yoy"], "end")
+            change(c, P + colw, y + 98, pct(fy), fy >= 0, 24, l["yoy"], "end")
         y += 140
         g = 18
         chh = min(190, (H - 120 - y - g) // 2) if land else 132
@@ -1220,10 +1305,10 @@ def card_cash(d, l, lang, t, size=None):
     # Big FCF
     c.add(text(P, y + 10, l["fcf"], 24, t["sub"], BODY_W))
     fv = money(fcf, lang)
-    pw = change_measure(pct(fy), 30, l["yoy"]) if show_pill else 0
+    pw = change_measure(pct(fy), 27, l["yoy"]) if show_pill else 0
     c.add(num(P - 4, y + 118, fv, num_fit(fv, W - 2 * P - pw - 40, 112), fcol))
     if show_pill:
-        change(c, W - P, y + 112, pct(fy), fy >= 0, 30, l["yoy"], "end")
+        change(c, W - P, y + 112, pct(fy), fy >= 0, 27, l["yoy"], "end")
     y += 160 + e * 10 // 100
 
     # Cells
@@ -1245,7 +1330,7 @@ def card_wide(d, l, lang, t, headline):
     left_w = 740
     lines, hs = hero_headline(c, P, ry + 34 + 56, cover_headline(d, lang, headline), left_w, 56)
     y = ry + 34 + 56 + round(hs * 1.14) * (len(lines) - 1) + 60
-    hero_block(c, P, y, l, d, lang, W, 100, 26, right=P + left_w)
+    hero_block(c, P, y, l, d, lang, W, 100, 24, right=P + left_w)
     foot = H - 92
     cw, chh, g = (left_w - 18) / 2, 112, 18
     my = foot - 26 - (2 * chh + g)
@@ -1295,11 +1380,14 @@ def card_mix(d, l, lang, t, labels=None, size=None):
     else:
         max_rows = [min(len(g[1]), 6 if len(groups) == 1 else 5) for g in groups]
     per_group_fixed = 120
-    cap = 76 if H <= 1350 else 76 * H // 1350
+    cap = 96 if H <= 1350 else 96 * H // 1350
     if side:
         rh = min(cap, (avail - per_group_fixed) / max(max(max_rows), 1))
     else:
         rh = min(cap, (avail - per_group_fixed * len(groups)) / max(sum(max_rows), 1))
+    stacked = rh >= 84   # room for the share / YoY line under the amount; else beside it
+    asize = 36 if stacked else (32 if rh >= 62 else 28)
+    msize = 17 if stacked else 16
     y0 = y
     for gi, (title, items) in enumerate(groups):
         cw = (W - 2 * P - 80) // 2 if side else W - 2 * P
@@ -1321,28 +1409,25 @@ def card_mix(d, l, lang, t, labels=None, size=None):
             w = bw * (it.get("share") or 0)
             c.rect(x, by, max(w - 3, 1), 30, pal[k % len(pal)], 2)
             x += w
-        y = by + 30 + 34
+        y = by + 30 + 14
         for k, it in enumerate(items):
-            ry = y + k * rh
-            c.rect(x0, ry - 14, 14, 14, pal[k % len(pal)], 3)
+            rt = y + k * rh
+            base = round(rt + rh / 2 + asize * 0.36 - (msize * 0.6 + 6 if stacked else 0))
             name = labels.get(it["label"], it["label"])
             mv = money(it["value"], lang)
-            name_w = min(cw - 450, cw - 280 - measure(mv, 26, 800) - 40)   # never run into the amount
-            if measure(name, 24, 500) > name_w:
-                while measure(name + "…", 24, 500) > name_w and len(name) > 4:
-                    name = name[:-1]
-                name += "…"
-            c.add(text(x0 + 28, ry, name, 24, t["ink"], 500))
-            c.add(text(x0 + cw - 280, ry, mv, 26, t["ink"], 800, "end"))
-            c.add(text(x0 + cw - 160, ry, f'{(it.get("share") or 0)*100:.0f}%', 22, t["sub"], BODY_W, "end"))
-            yy = it.get("yoy")
-            if yy is not None:
-                ysz = 21
-                while ysz > 13 and change_measure(pct(yy), ysz, l["yoy"]) > 150:
-                    ysz -= 1
-                change(c, x0 + cw, ry, pct(yy), yy >= 0, ysz, l["yoy"], "end")
-            c.rect(x0, ry + rh * 0.42, cw, 1, t["faint"])
-        y += len(items) * rh + 40
+            share = f'{(it.get("share") or 0)*100:.0f}%' if it.get("share") is not None else None
+            share_long = share and (f'{l["share"]} {share}' if lang == "zh" else f'{share} {l["share"]}')
+            opts = meta_options(share, share_long, it.get("yoy"), l["yoy"])
+            want = min(measure(name, 24, BODY_W), cw * 0.42)
+            for parts in opts:   # drop the labels before squeezing the segment name
+                vw = row_value_width(mv, asize, parts, msize, stacked)
+                if cw - 28 - vw - 28 >= want:
+                    break
+            row_value(c, x0 + cw, base, mv, asize, parts, msize, stacked)
+            c.rect(x0, base - 15, 14, 14, pal[k % len(pal)], 3)
+            c.add(text(x0 + 28, base, clip(name, cw - 28 - vw - 28, 24, BODY_W), 24, t["ink"], BODY_W))
+            c.rect(x0, rt + rh - 1, cw, 1, t["faint"])
+        y += len(items) * rh + 46
         if gi == 0 and len(groups) == 2 and not side and H > 1350:   # 9:16: spread the spare height between groups
             used = sum(per_group_fixed + rh * min(len(g_[1]), max_rows[k]) for k, g_ in enumerate(groups))
             y += max(0, avail - used) // 3

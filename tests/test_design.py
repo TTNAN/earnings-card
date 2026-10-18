@@ -95,7 +95,7 @@ class Charts(unittest.TestCase):
     def test_line_chart_has_no_dot_per_point(self):
         svg = R.card_trend(self.d, R.L["en"], "en", R.THEMES["light"])
         self.assertLessEqual(svg.count("<circle"), 2 * 3)   # a start mark and an end dot per series
-        self.assertEqual(len(re.findall(r'<circle [^>]*r="10"', svg)), 3)
+        self.assertEqual(len(re.findall(r'<circle [^>]*r="12"', svg)), 3)
 
     def test_waterfall_layers(self):
         t = R.THEMES["light"]
@@ -103,6 +103,29 @@ class Charts(unittest.TestCase):
         self.assertIn(f'fill="{t["cool"]}"', svg)     # costs: cool grey
         self.assertIn(f'fill="{t["a2"]}"', svg)       # net income: the warm accent
         self.assertIn(f'fill="{t["up"]}"', svg)       # the positive other-income step
+
+
+class TableRows(unittest.TestCase):
+    """Mix and waterfall rows read in two levels: the amount as a hero-style figure, share / YoY small and grey."""
+    def size_of(self, svg, s):
+        return int(re.search(r'font-size="(\d+)"[^>]*><tspan[^>]*>%s<' % re.escape(s), svg).group(1))
+
+    def test_mix_amount_leads(self):
+        d = load("NVDA.json")
+        t = R.THEMES["light"]
+        for ratio in R.RATIOS:
+            (_, svg), = R.render_cards(d, "en", "light", ["mix"], ratio)
+            with self.subTest(ratio=ratio):
+                amount = max(int(m) for m in re.findall(r'data-fig="[^"]+"[^>]*font-size="(\d+)"', svg))
+                share = int(re.search(r'font-size="(\d+)" font-weight="400" fill="' + t["sub"] + r'"[^>]*><tspan[^>]*>\d+% share<', svg).group(1))
+                self.assertGreaterEqual(amount, share * 1.6)
+                self.assertRegex(svg, r'font-weight="600" fill="%s"[^>]*><tspan[^>]*>\+' % t["up"])   # YoY: lighter mark
+
+    def test_profit_amount_is_a_figure(self):
+        svg = R.card_profit(load("NVDA.json"), R.L["zh"], "zh", R.THEMES["light"])
+        self.assertGreaterEqual(self.size_of(svg, "962.2"), 34)
+        self.assertLess(self.size_of(svg, "亿"), self.size_of(svg, "962.2") * 0.7)   # small unit, like num()
+        self.assertLessEqual(self.size_of(svg, "25.0% "), 17)
 
 
 class Masthead(unittest.TestCase):
