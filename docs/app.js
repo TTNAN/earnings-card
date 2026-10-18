@@ -501,17 +501,17 @@ async function boot() {
         await new Promise((ok, no) => { const s = document.createElement("script"); s.src = base + "pyodide.js"; s.onload = ok; s.onerror = () => no(new Error("pyodide.js")); document.head.appendChild(s); });
         pyo = await Promise.race([loadPyodide({indexURL: base}), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 45000))]);
         break;
-      } catch (e) { console.warn("pyodide from", base, "failed:", e); lastErr = e; pyo = null; }
+      } catch (e) { console.warn("pyodide from", base, "failed:", e); window.__stage = "load " + (base === PYODIDE ? "cdn" : "local"); lastErr = e; pyo = null; }
     }
     if (!pyo) throw lastErr;
-    src = await srcP;
+    window.__stage = "render.py"; src = await srcP;
     py = pyo;
-    py.FS.writeFile("/home/pyodide/render.py", src);
+    window.__stage = "init"; py.FS.writeFile("/home/pyodide/render.py", src);
     py.globals.set("js_measure", measureText);
     resetMeasurer();
     webRender = py.pyimport("render").web_render;
   } catch (e) {
-    console.error(e); status(tr().bootFail + " (" + e.message + ")", true); return;
+    console.error(e); const st = (e && e.stack || "").split("\n").slice(0, 4).join(" | "); status(tr().bootFail + " [" + (window.__stage || "?") + "] (" + (e && e.message) + ") " + st + " · " + navigator.userAgent, true); return;
   }
   await listP;
   await (document.fonts ? document.fonts.ready : Promise.resolve());
