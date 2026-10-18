@@ -50,6 +50,7 @@ class AnnualCards(unittest.TestCase):
                 self.assertIn("FY26", cover)
                 self.assertIn("Fiscal year ended" if lang == "en" else "财年截至", cover)
                 self.assertNotIn("quarter", " ".join(texts(cards["trend"])).lower())
+                self.assertIn("FY22", texts(cards["wide"]))                  # bar labels, not dates
 
     def test_annual_yoy_uses_prior_year(self):
         d = load("NVDA-annual.json")

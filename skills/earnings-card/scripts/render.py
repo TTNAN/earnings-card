@@ -887,7 +887,7 @@ def card_wide(d, l, lang, t, headline):
     rw = W - P - rx
     c.add(text(rx, 252, l["trend"].format(n=len(d["trend"])), 20, t["sub"], 500))
     bars(c, rx, 272, rw, my + 2 * chh + g - 272 - 46, [q["revenue"] for q in d["trend"]],
-         [qlabel(q["end"]) for q in d["trend"]], lang)
+         [plabel(q) for q in d["trend"]], lang)
     footer(c, d, l, lang, P)
     return c.svg()
 
