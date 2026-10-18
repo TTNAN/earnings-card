@@ -2,11 +2,12 @@
 """Static images for the web generator, rendered with render.py + headless Chromium (committed to docs/):
 
   docs/styles/thumbs/{style}.webp   style-picker thumbnails: the NVDA cover (zh, 4:5) in each of the 12 styles
+  docs/sample/nvda-cover-{zh,en}.webp   720x900 empty-state sample: the NVDA cover (4:5, light) with a headline
   docs/og.png                       1200x630 share image (Open Graph / Twitter summary_large_image)
   docs/favicon.svg, docs/favicon-32.png, docs/apple-touch-icon.png (180x180)   the brand mark
 
   pip install playwright pillow   # Chromium: CHROMIUM=/path/to/chromium, default /usr/bin/chromium
-  python3 tools/build_assets.py [--only thumbs|og|icons]
+  python3 tools/build_assets.py [--only thumbs|sample|og|icons]
 
 Needs the card fonts installed locally (Inter, Noto Sans/Serif SC, Source Serif 4, JetBrains Mono),
 since the SVGs name them by family. Rerun after a style or the cover layout changes.
@@ -35,11 +36,24 @@ def nvda():
     return R.period_record(rec["quarter"])
 
 
-def cover(style, headline=""):
+def cover(style, headline="", lang="zh"):
     d = nvda()
     t = R.build_style({"base": style})
     R.CURRENT_PAGE = ""
-    return R.render_cards(d, "zh", t, ["cover"], "4:5", headline)[0][1].replace("__PAGE__", "")
+    return R.render_cards(d, lang, t, ["cover"], "4:5", headline)[0][1].replace("__PAGE__", "")
+
+
+SAMPLE_HEAD = {"zh": "营收同比翻倍，毛利率稳在 75%", "en": "Revenue doubled, margins held at 75%"}
+
+
+async def samples(b):
+    os.makedirs(os.path.join(DOCS, "sample"), exist_ok=True)
+    for lang, head in SAMPLE_HEAD.items():
+        svg = cover("light", head, lang).replace("<svg ", '<svg style="display:block;width:1080px;height:1350px" ', 1)
+        png = await shoot(b, page(svg), 1080, 1350)
+        path = os.path.join(DOCS, "sample", f"nvda-cover-{lang}.webp")
+        open(path, "wb").write(webp(png, (720, 900)))
+        print(path, os.path.getsize(path), "bytes")
 
 
 def webp(png, size=None):
@@ -124,6 +138,8 @@ async def main():
         b = await p.chromium.launch(executable_path=CHROMIUM, args=["--no-sandbox"])
         if only in ("", "thumbs"):
             await thumbs(b)
+        if only in ("", "sample"):
+            await samples(b)
         if only in ("", "og"):
             await og(b)
         if only in ("", "icons"):
