@@ -1,10 +1,10 @@
 /* earnings-card web generator.
- * The cards are drawn by the same render.py the CLI uses, running in the browser through Pyodide.
- * Text is measured with canvas measureText (render.set_measurer), so layouts match the web fonts.
+ * The cards are drawn by the same render.py the CLI uses, running in the browser through Pyodide
+ * inside a Web Worker (worker.js), so browser extensions that patch the page can't break it.
+ * Text widths: the page measures per-character width tables with canvas measureText and the web fonts,
+ * and the worker sums them (py/measure_tables.py), so layouts match the fonts on screen.
  * Data is precomputed nightly from SEC EDGAR into data/ (the browser can't call SEC directly). */
 "use strict";
-const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
-const LOCAL_PYODIDE = new URL("pyodide/", location.href).href;
 const CARD_ORDER = ["cover", "mix", "profit", "trend", "cash", "guide", "wide"];
 const STYLES = [
   {id: "light", zh: "杂志米白", en: "Paper", bg: "#F4F1EA", ink: "#151515", hi: "#8C6A3F"},
@@ -84,7 +84,7 @@ const S = {
   off: new Set((q.get("hide") || "").split(",").filter(Boolean)),
 };
 if (!S.lang) S.lang = S.ui;
-let py = null, webRender = null, tickers = [], dataCache = {}, current = null, rendered = [], seq = 0;
+let engine = null, families = [], tickers = [], dataCache = {}, current = null, rendered = [], seq = 0;
 const tr = () => T[S.ui];
 
 // ---------- UI text ----------
@@ -251,29 +251,35 @@ function options() {
   for (const k of ["bg", "ink", "hi"]) if (S.colorOn[k]) o[k] = $("#c-" + k).value;
   return o;
 }
-let fontPass = 0;
-async function render() {
-  if (!webRender) return;
+let fontPass = 0, jobId = 0, inFlight = 0, rerun = false;
+// One render at a time in the worker. Changes made meanwhile set `rerun`; the stale result is dropped
+// and the newest state is sent, so a burst of edits never queues up a backlog of renders.
+function render() {
+  if (!engine) return;
   pickPeriod();
   drawChecks();
   if (!dataCache[S.ticker]) return;
   if (!current) { status(tr().noPeriod, true); $("#grid").innerHTML = ""; rendered = []; $("#zip").disabled = true; return; }
   $("#meta").innerHTML = metaHTML();
+  if (inFlight) { rerun = true; return; }
   $("#grid").classList.add("busy");
-  await new Promise(r => requestAnimationFrame(() => setTimeout(r)));
-  let out;
-  try {
-    out = JSON.parse(webRender(JSON.stringify(current.data), JSON.stringify(options())));
-  } catch (e) {
-    console.error(e); status(String(e).slice(0, 300), true); $("#grid").classList.remove("busy"); return;
-  }
+  inFlight = ++jobId;
+  engine.postMessage({type: "render", id: inFlight, data: JSON.stringify(current.data), opts: JSON.stringify(options())});
+}
+async function onWorker(m) {
+  if (m.type !== "result" && m.type !== "error") return;
+  if (m.id !== inFlight) return;
+  inFlight = 0;
+  if (rerun) { rerun = false; render(); return; }
+  $("#grid").classList.remove("busy");
+  if (m.type === "error") { console.error(m.message, m.stack); status(String(m.message).slice(0, 300), true); return; }
+  const out = JSON.parse(m.out);
   status("");
   rendered = out;
   drawGrid(out);
-  $("#grid").classList.remove("busy");
   $("#zip").disabled = !out.length;
   // Web fonts load lazily (Chinese fonts in slices): once the glyphs on these cards are in, measure again.
-  if (await ensureFonts(out) && fontPass < 3) { fontPass++; resetMeasurer(); render(); } else fontPass = 0;
+  if (await ensureFonts(out) && fontPass < 3) { fontPass++; sendTables(); render(); } else fontPass = 0;
 }
 function drawGrid(out) {
   const t = tr(), grid = $("#grid");
@@ -307,12 +313,28 @@ async function ensureFonts(cards) {
   await Promise.all(missing.map(s => document.fonts.load(s, text).catch(() => null)));
   return true;
 }
+// Width tables for the worker: every char we expect, at 100px, per (font stack as render.py passes it, weight).
+// Any other char >= U+2E80 uses the width of 中; anything else unlisted uses the width of n.
 const mctx = document.createElement("canvas").getContext("2d");
-function measureText(s, family, size, weight) {
-  mctx.font = `${weight} ${size}px ${family}`;
-  return mctx.measureText(s).width;
+const TABLE_CHARS = (() => {
+  let s = "";
+  for (let c = 32; c < 127; c++) s += String.fromCharCode(c);
+  s += "·—–…×÷±°€£¥‘’“”•→←↑↓▲▼√≈≤≥‰é";
+  s += "，。、：；（）％！？《》「」【】『』～￥＋－／　";
+  return [...new Set(s)];
+})();
+const TABLE_WEIGHTS = [300, 400, 500, 600, 700, 800, 900];
+function buildTables() {
+  const t = {};
+  for (const fam of families) for (const w of TABLE_WEIGHTS) {
+    mctx.font = `${w} 100px ${fam}`;
+    const chars = {};
+    for (const ch of TABLE_CHARS) chars[ch] = mctx.measureText(ch).width;
+    t[fam + "|" + w] = {chars, cjk: mctx.measureText("中").width, other: mctx.measureText("n").width};
+  }
+  return t;
 }
-function resetMeasurer() { py && py.runPython("import render; render.set_measurer(js_measure)"); }
+function sendTables() { engine && engine.postMessage({type: "tables", tables: buildTables()}); }
 
 // Subset the fonts to exactly the characters on the cards and embed them, so the PNG matches the preview.
 const fontCssCache = {};
@@ -493,28 +515,39 @@ async function boot() {
   const listP = getJSON("data/tickers.json").then(l => { tickers = l; $("#coverage").textContent = tr().coverage(l.length); }).catch(() => {});
   getJSON("data/labels-zh.json").then(l => { labelsZh = l; }).catch(() => { labelsZh = {}; });
   try {
-    let pyo, src, lastErr;
-    const srcP = fetch("py/render.py").then(r => { if (!r.ok) throw new Error("render.py " + r.status); return r.text(); });
-    for (const base of [PYODIDE, LOCAL_PYODIDE]) {          // CDN first, then the copy in this repo
-      try {
-        if (base !== PYODIDE) { try { delete window.loadPyodide; delete window._createPyodideModule; } catch (e) {} }
-        await new Promise((ok, no) => { const s = document.createElement("script"); s.src = base + "pyodide.js"; s.onload = ok; s.onerror = () => no(new Error("pyodide.js")); document.head.appendChild(s); });
-        pyo = await Promise.race([loadPyodide({indexURL: base}), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 45000))]);
-        break;
-      } catch (e) { console.warn("pyodide from", base, "failed:", e); window.__stage = "load " + (base === PYODIDE ? "cdn" : "local"); lastErr = e; pyo = null; }
-    }
-    if (!pyo) throw lastErr;
-    window.__stage = "render.py"; src = await srcP;
-    py = pyo;
-    window.__stage = "init"; py.FS.writeFile("/home/pyodide/render.py", src);
-    py.globals.set("js_measure", measureText);
-    resetMeasurer();
-    webRender = py.pyimport("render").web_render;
+    engine = await startEngine();
   } catch (e) {
-    console.error(e); const st = (e && e.stack || "").split("\n").slice(0, 4).join(" | "); status(tr().bootFail + " [" + (window.__stage || "?") + "] (" + (e && e.message) + ") " + st + " · " + navigator.userAgent, true); return;
+    console.error(e);
+    const st = String(e && e.stack || "").split("\n").slice(0, 4).join(" | ");
+    status(tr().bootFail + " [" + (e && e.stage || "?") + "] (" + (e && e.message) + ") " + st + " · " + navigator.userAgent, true);
+    return;
   }
   await listP;
   await (document.fonts ? document.fonts.ready : Promise.resolve());
+  sendTables();
   loadTicker();
+}
+// Pyodide + render.py live in worker.js; the page itself never loads pyodide.js.
+function startEngine() {
+  return new Promise((ok, no) => {
+    let stage = "worker", w;
+    const fail = (msg, stack, st) => no(Object.assign(new Error(msg), {stage: st || stage, stack: stack || ""}));
+    try { w = new Worker("worker.js"); } catch (e) { fail(String(e && e.message || e), e && e.stack); return; }
+    w.onerror = e => { e.preventDefault(); fail(e.message || "worker failed to start", e.filename ? `${e.filename}:${e.lineno}` : ""); };
+    w.onmessage = e => {
+      const m = e.data;
+      if (m.type === "stage") stage = m.stage;
+      else if (m.type === "bootError") { fail(m.message, m.stack, m.stage); w.terminate(); }
+      else if (m.type === "ready") {
+        families = m.families;
+        w.onmessage = ev => onWorker(ev.data);
+        w.onerror = ev => {   // the worker died mid-session: say so instead of spinning forever
+          ev.preventDefault(); inFlight = 0; rerun = false; $("#grid").classList.remove("busy");
+          status(tr().bootFail + " [worker] (" + ev.message + ") · " + navigator.userAgent, true);
+        };
+        ok(w);
+      }
+    };
+  });
 }
 boot();
