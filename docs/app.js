@@ -53,6 +53,8 @@ const T = {
     filedOn: d => `${d} 披露`, reportsOn: (d, w) => `${d} ${w}发布财报`,
     sum2: (st, r, lg) => `${st} · ${r} · ${lg === "zh" ? "中文" : "English"}`,
     sum3: (n, h, wm) => [`${n} 张卡片`, h ? "有标题" : "", wm ? "有水印" : ""].filter(Boolean).join(" · "),
+    sampleBadge: "样张", sampleAlt: "NVDA 财报封面卡样张", sampleTitle: "生成后是这样的",
+    sampleLede: (tk, n) => `这是英伟达（NVDA）的封面卡。画笔准备好后，会自动为 ${tk} 生成 ${n} 张：`,
     fBoot: ["正在准备画笔…", "正在准备画笔，第一次打开要多等一会儿…", "还在准备画笔，网络有点慢，请稍候…"],
     fFonts: "正在铺纸、摆好字体…", fLoading: t => `正在翻 ${t} 的财报…`, fDrawing: (i, n) => `正在排版第 ${i} 张（共 ${n} 张）…`,
     fBootFail: "画笔没能准备好，可能是网络不稳。点「重试」或刷新页面再试一次。", fRenderFail: "这张卡片没画出来，点「重试」再来一次。",
@@ -103,6 +105,8 @@ const T = {
     filedOn: d => `filed ${d}`, reportsOn: (d, w) => `reports ${w} ${d}`,
     sum2: (st, r, lg) => `${st} · ${r} · ${lg === "zh" ? "Chinese" : "English"}`,
     sum3: (n, h, wm) => [`${n} cards`, h ? "headline" : "", wm ? "watermark" : ""].filter(Boolean).join(" · "),
+    sampleBadge: "Sample", sampleAlt: "Sample NVDA earnings cover card", sampleTitle: "Here's what you'll get",
+    sampleLede: (tk, n) => `This is NVIDIA's cover card. Once the engine is ready, ${tk} gets ${n} cards:`,
     fBoot: ["Getting the brushes ready…", "Getting the brushes ready; the first visit takes a little longer…", "Still getting ready, the network is slow; hang on…"],
     fFonts: "Laying out the paper and fonts…", fLoading: t => `Reading ${t}'s filings…`, fDrawing: (i, n) => `Laying out card ${i} of ${n}…`,
     fBootFail: "Couldn't get ready, probably a network hiccup. Hit Retry or reload the page.", fRenderFail: "This card didn't come out. Hit Retry to try again.",
@@ -318,8 +322,9 @@ function status(msg, err, prog, detail) {
   $("#statusDetail").hidden = !err || !detail;   // technical details only behind 详情, and only for errors
   $("#statusDetailText").textContent = detail || "";
   $("#retry").hidden = !err || !retryFn;
-  $("#prog").hidden = prog == null || !!err;
-  if (prog != null) $("#progBar").style.width = Math.round(prog * 100) + "%";
+  // We can't measure how long Pyodide or a card will take, so the bar never pretends: it is an
+  // indeterminate sweep whenever something is working (the text says what, and "card 3 of 8" is a real count).
+  $("#prog").hidden = !prog || !!err;
 }
 let retryFn = null;
 function fail(msg, retry, detail) { retryFn = retry || null; status(msg, true, null, detail); }
@@ -453,7 +458,7 @@ async function loadTicker() {
     return;
   }
   drawSlots(expectedNames(), true);
-  if (engine) status(tr().fLoading(tk), false, null);
+  if (engine) status(tr().fLoading(tk), false, true);
   try {
     if (!dataCache[tk]) {
       const [rec, lab, gzh, gen] = await Promise.all([
@@ -563,14 +568,31 @@ function drawTiles(names, cards) {
   grid.dataset.sig = names.join(",") + "|" + S.ratio + "|" + S.ui;
   grid.innerHTML = names.map((n, i) => tileHTML(n, i, cards && cards[i])).join("");
   grid.querySelectorAll("figure").forEach(bindTile);
+  showActs(!!(cards && cards.some(Boolean)) || rendered.length > 0);
 }
 // Placeholders for this set of cards. When the set on screen is the same, keep the old cards (dimmed)
 // and swap each one as its new version arrives, so a colour change doesn't flash grey boxes.
 function drawSlots(names, keep) {
+  if (!engine && !rendered.length) { drawSample(names); return; }
   const grid = $("#grid"), sig = names.join(",") + "|" + S.ratio + "|" + S.ui;
   if (keep && grid.dataset.sig === sig) { grid.querySelectorAll("figure").forEach(f => f.classList.add("stale")); return; }
   drawTiles(names, null);
 }
+// Before the engine is up there is nothing of theirs to show: a finished NVDA cover (pre-rendered) shows
+// what they will get, with the list of cards this set will hold. Real tiles replace it once rendering starts.
+function drawSample(names) {
+  const grid = $("#grid"), t = tr(), lg = S.lang === "en" ? "en" : "zh";
+  const sig = "sample|" + lg + "|" + names.join(",");
+  showActs(false);
+  if (grid.dataset.sig === sig) return;
+  grid.className = "grid sample-on"; grid.dataset.sig = sig;
+  const list = names.map(n => `<li>${esc(t.names[n] || n)}</li>`).join("");
+  grid.innerHTML = `<div class="sample"><figure><div class="img"><img src="sample/nvda-cover-${lg}.webp" width="720" height="900" alt="${esc(t.sampleAlt)}" decoding="async"></div>
+</figure>
+    <div class="sample-tx"><span class="badge">${esc(t.sampleBadge)}</span><h3>${esc(t.sampleTitle)}</h3><p>${esc(t.sampleLede(S.ticker, names.length))}</p><ol>${list}</ol></div></div>`;
+}
+// Copy / download-all only appear once there is something to copy or download.
+function showActs(on) { const a = $(".bar .acts"); if (a) a.hidden = !on; }
 function fillSlot(i, card) {
   const old = $("#grid").children[i];
   if (!old) return;
@@ -578,6 +600,7 @@ function fillSlot(i, card) {
   tmp.innerHTML = tileHTML(card.name, i, card);
   const fig = tmp.firstElementChild;
   old.replaceWith(fig); bindTile(fig);
+  showActs(true);
 }
 
 // ---------- rendering ----------
@@ -612,7 +635,7 @@ function render(quiet) {
   step();
 }
 function step() {
-  if (!job.quiet) status(tr().fDrawing(job.i + 1, job.names.length), false, job.i / job.names.length);
+  if (!job.quiet) status(tr().fDrawing(job.i + 1, job.names.length), false, true);
   engine.postMessage({type: "render", id: job.id, data: job.data, opts: JSON.stringify(Object.assign({}, job.o, {only: job.i}))});
 }
 async function onWorker(m) {
@@ -933,7 +956,11 @@ function drawSummaries() {
   const s1 = $("#sum1"), s2 = $("#sum2"), s3 = $("#sum3");
   if (!s1) return;
   s1.textContent = S.ticker + " · " + (c && c.fiscal_label ? c.fiscal_label : (S.period === "annual" ? t.annual : t.quarter));
-  s2.textContent = t.sum2(st ? st[S.ui] : S.style, S.ratio, S.lang);
+  // a 12px chip of the current style (background + accent, honouring custom colours) before the words
+  const bg = S.colorOn.bg && S.colors.bg ? S.colors.bg : st ? st.bg : "#eee";
+  const ink = S.colorOn.ink && S.colors.ink ? S.colors.ink : st ? st.ink : "#000";
+  const hi = S.colorOn.hi && S.colors.hi ? S.colors.hi : st ? st.hi : "#888";
+  s2.innerHTML = `<i class="sw" style="background:linear-gradient(135deg,${esc(bg)} 0 50%,${esc(hi)} 50% 100%);border-color:${esc(ink)}" aria-hidden="true"></i>` + esc(t.sum2(st ? st[S.ui] : S.style, S.ratio, S.lang));
   s3.textContent = t.sum3(expectedNames().length, !!S.headline, !!S.handle);
 }
 
@@ -1029,8 +1056,8 @@ function showBoot() {
   if ($("#status").classList.contains("err") && !$("#status").hidden) return;   // e.g. an unsupported ticker: keep saying so
   // Friendly words only: which CDN or stage the engine is on stays out of sight (it is in the error details).
   const t = tr(), sec = (Date.now() - bootT0) / 1000;
-  if (bootStage === "fonts") { status(t.fFonts, false, 0.92); return; }
-  status(t.fBoot[sec < 8 ? 0 : sec < 25 ? 1 : 2], false, 0.9 * (1 - Math.exp(-sec / 12)));
+  if (bootStage === "fonts") { status(t.fFonts, false, true); return; }
+  status(t.fBoot[sec < 8 ? 0 : sec < 25 ? 1 : 2], false, true);
 }
 async function bootEngine() {
   bootT0 = Date.now(); bootStage = "worker"; showBoot();
@@ -1049,7 +1076,7 @@ async function bootEngine() {
   await (document.fonts ? document.fonts.ready : Promise.resolve());
   sendTables();
   if (dataCache[S.ticker]) schedule(0);
-  else if (!$("#status").classList.contains("err")) status(tr().fLoading(S.ticker), false, null);
+  else if (!$("#status").classList.contains("err")) status(tr().fLoading(S.ticker), false, true);
 }
 async function boot() {
   applyUI();
