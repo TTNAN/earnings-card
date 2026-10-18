@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      # SEC asks for a contact in the User-Agent. Set the SEC_USER_AGENT repo secret to override.
-      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT || 'earnings-card (github.com/TTNAN/earnings-card) thnssssss7@gmail.com' }}
+      # SEC asks for "Name email" in the User-Agent; a URL or parentheses in it gets 403. Set the SEC_USER_AGENT repo secret to override.
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT || 'earnings-card thnssssss7@gmail.com' }}
       EC_CACHE: ${{ github.workspace }}/.sec-cache
       EC_MIN_INTERVAL: "0.15"   # <= ~7 requests/second, under SEC's 10/s limit
     steps:
