@@ -211,24 +211,9 @@ function mixHex(a, b, w) {
   const x = p(a), y = p(b);
   return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * w).toString(16).padStart(2, "0")).join("");
 }
-// The page takes on a whisper of the chosen style: its accent drives the solid buttons and the selected
-// states, and the paper shifts a few percent toward it. The accent is darkened until white text on it
-// passes AA (4.5:1); the paper keeps body and secondary text at AA too.
-const PAPER = "#F3F0EA", MUTE = "#6F6A60";
-function applyTint() {
-  const st = STYLES.find(x => x.id === S.style) || STYLES[0];
-  let acc = (S.colorOn.hi && S.colors.hi) || st.tint || st.hi;
-  for (let i = 0; i < 24 && contrast(acc, "#ffffff") < 4.6; i++) acc = mixHex(acc, "#000000", 0.07);
-  let w = 0.09, paper = mixHex(PAPER, acc, w);
-  while (w > 0 && contrast(paper, MUTE) < 4.5) { w -= 0.01; paper = mixHex(PAPER, acc, Math.max(w, 0)); }
-  const r = document.documentElement.style;
-  r.setProperty("--accent", acc);
-  r.setProperty("--accent-soft", mixHex(paper, acc, 0.14));
-  r.setProperty("--paper", paper);
-  r.setProperty("--stage", mixHex(paper, "#ffffff", 0.55));
-  const m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.content = paper;
-}
+// The page stays neutral (near-white, black buttons) so the cards carry all the colour; the chosen
+// style shows only on its thumbnail and the chip in the step-2 summary. (A page-wide tint was tried and dropped.)
+function applyTint() {}
 
 // ---------- toast ----------
 let toastT = null;
