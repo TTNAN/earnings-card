@@ -67,6 +67,16 @@ earnings-card 直接从财报原文帮你做这张图：
 </tr>
 </table>
 
+## 六种风格，也能用你自己的
+
+![六种内置风格](examples/zh/styles.png)
+
+`杂志米白` `墨黑` `极简黑白` `终端` `财经报纸` `小红书色块`，一句话切换：「用终端风格给 NVDA 做一套」。
+
+想要自己的配色、字体、@账号和头像水印？写一个小 JSON 就行（[说明](skills/earnings-card/styles/README.md)）：
+
+![自定义风格](examples/zh/custom-style.png)
+
 ## 安装
 
 ```bash

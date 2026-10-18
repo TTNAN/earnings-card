@@ -67,6 +67,16 @@ earnings-card makes that image for you, from the filing itself:
 </tr>
 </table>
 
+## Six styles, or bring your own
+
+![Six built-in styles](examples/en/styles.png)
+
+`paper` `ink` `mono` `terminal` `salmon` `pop`. Just ask: "Make NVDA cards in the terminal style".
+
+Want your own colors, font, @handle and avatar watermark? One small JSON file ([guide](skills/earnings-card/styles/README.md)):
+
+![Custom style](examples/en/custom-style.png)
+
 ## Install
 
 ```bash

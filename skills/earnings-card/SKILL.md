@@ -36,7 +36,7 @@ Make a set of up to seven editorial-quality cards (up to six portrait cards plus
    ```
    Rules: only numbers the release states (turn "X plus or minus 2%" into low/high; a point estimate has low = high). `base` and `actual` come from data.json (same GAAP basis as the guidance; skip a metric whose basis doesn't match, e.g. non-GAAP only). Up to 4 next items, 3 prior items. If the release has no numeric outlook (Apple, Microsoft and Tesla give theirs on the call), skip `--guidance`; the card is left out and say so in one line.
    Pick a subset with `--cards cover,profit` when the user only wants some.
-   Options: `--lang zh|en` (match the user's language), `--theme light|dark`, `--png` (needs `pip install cairosvg`; otherwise open the .html and screenshot).
+   Options: `--lang zh|en` (match the user's language), `--style light|dark|mono|terminal|salmon|pop` (paper, ink, Swiss black & white, Bloomberg-style terminal, salmon newspaper, Xiaohongshu pop; pick the one the user asks for, default light) or `--style my-style.json` for the user's own colors, font, @handle and avatar (see `styles/README.md`), `--png` (needs `pip install cairosvg`; otherwise open the .html and screenshot).
 4. Give the user the PNG (or HTML) and one line on what stands out. Mention it is GAAP data from the 10-Q/10-K, not company-adjusted figures.
 
 ## Limits

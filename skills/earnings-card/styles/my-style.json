@@ -1,0 +1,14 @@
+{
+  "base": "dark",
+  "font": "serif",
+  "bg": "#0F1A2B",
+  "card": "#15233A",
+  "faint": "#25385A",
+  "bar": "#2B4066",
+  "ink": "#F5F1E8",
+  "hi": "#E8B04B",
+  "a2": "#E8B04B",
+  "palette": ["#E8B04B", "#6FA8FF", "#9BD1B5", "#F28B82", "#8A9BB8", "#25385A"],
+  "round": 0.5,
+  "handle": "@your_handle"
+}

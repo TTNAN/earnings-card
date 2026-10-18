@@ -17,14 +17,78 @@ Cards (1080x1350 unless noted):
 """
 import re, json, sys, html, argparse, os, glob
 
+SANS = "Inter, 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+SANS_SC = "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+SERIF = "'Source Serif 4', 'Noto Serif SC', 'Songti SC', 'STSong', Georgia, serif"
+SERIF_SC = "'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif"
+MONO = "'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Noto Sans SC', monospace"
+# font files used only to measure text width (PIL); browsers use the CSS families above
+PIL_SANS = {"bold": ["Inter-ExtraBold*", "Inter-Bold*"], "reg": ["Inter-Medium*", "Inter-Regular*"]}
+PIL_SERIF = {"bold": ["SourceSerif4-Black*", "SourceSerif4-Bold*"], "reg": ["SourceSerif4-Regular*"]}
+PIL_MONO = {"bold": ["JetBrainsMono-ExtraBold*", "JetBrainsMono-Bold*"], "reg": ["JetBrainsMono-Regular*"]}
+PIL_SANS_SC = {"bold": ["NotoSansSC-Bold*", "NotoSansCJK*Bold*", "PingFang*"], "reg": ["NotoSansSC-Regular*", "NotoSansCJK*Regular*", "PingFang*"]}
+PIL_SERIF_SC = {"bold": ["NotoSerifSC-Bold*", "NotoSerifCJK*Bold*", "Songti*"], "reg": ["NotoSerifSC-Regular*", "NotoSerifCJK*Regular*", "Songti*"]}
+
+# Built-in styles. Every key can be overridden with --style my-style.json (see styles/README in the skill).
+#   bg ink sub faint bar card: page, text, secondary text, hairlines, chart bars, metric boxes
+#   up down: good / bad numbers;  a1 a2 a3: line-chart series;  hi: highlighted bar (latest quarter)
+#   palette: segment colors;  round: corner radius multiplier (0 = square);  stroke: box outline width
 THEMES = {
-    "light": dict(bg="#F4F1EA", ink="#151515", sub="#6F6A60", faint="#DDD7CB", bar="#CFC8BA",
-                  up="#1E7A4C", down="#B5403A", card="#FBF9F4", a1="#151515", a2="#8C6A3F", a3="#9C978C"),
-    "dark": dict(bg="#121212", ink="#F2EFE8", sub="#9A958B", faint="#2E2C29", bar="#3A3733",
-                 up="#5BC48A", down="#E5776F", card="#1A1A19", a1="#F2EFE8", a2="#D9A65E", a3="#77736B"),
+    "light": dict(label="Paper · 杂志米白", bg="#F4F1EA", ink="#151515", sub="#6F6A60", faint="#DDD7CB", bar="#CFC8BA",
+                  up="#1E7A4C", down="#B5403A", card="#FBF9F4", a1="#151515", a2="#8C6A3F", a3="#9C978C",
+                  palette=["#151515", "#8C6A3F", "#B9A27E", "#6F6A60", "#CFC8BA", "#E3DDD1", "#A8A296", "#EFEAE0"]),
+    "dark": dict(label="Ink · 墨黑", bg="#121212", ink="#F2EFE8", sub="#9A958B", faint="#2E2C29", bar="#3A3733",
+                 up="#5BC48A", down="#E5776F", card="#1A1A19", a1="#F2EFE8", a2="#D9A65E", a3="#77736B", band="#77736B",
+                 palette=["#F2EFE8", "#D9A65E", "#9C7C4E", "#9A958B", "#5A5650", "#3A3733", "#77736B", "#2E2C29"]),
+    "mono": dict(label="Swiss · 极简黑白", bg="#FFFFFF", ink="#000000", sub="#6B6B6B", faint="#E4E4E4", bar="#D6D6D6",
+                 up="#00873C", down="#E10600", card="#FFFFFF", a1="#000000", a2="#E10600", a3="#9A9A9A", hi="#000000",
+                 round=0, stroke=2, card_stroke="#000000",
+                 palette=["#000000", "#E10600", "#6B6B6B", "#A8A8A8", "#CFCFCF", "#E6E6E6", "#555555", "#F2F2F2"]),
+    "terminal": dict(label="Terminal · 终端", bg="#0A0A0A", ink="#FFB000", sub="#9C8A62", faint="#2B261C", bar="#3D3424",
+                     up="#3BE08A", down="#FF5A4E", card="#12100C", a1="#FFB000", a2="#33C7FF", a3="#9C8A62", band="#5C4D30",
+                     round=0, stroke=1.5, font=MONO, cjk_font=SANS_SC, pil=PIL_MONO,
+                     palette=["#FFB000", "#33C7FF", "#3BE08A", "#C77DFF", "#9C8A62", "#5C4D30", "#FF5A4E", "#2B261C"]),
+    "salmon": dict(label="Salmon · 财经报纸", bg="#FFF1E5", ink="#33302E", sub="#66605C", faint="#E6D9CE", bar="#E3CDBA",
+                   up="#0D7680", down="#CC0000", card="#FFF8F2", a1="#0D7680", a2="#990F3D", a3="#8F8580", hi="#0D7680",
+                   round=0.3, stroke=1, font=SERIF, cjk_font=SERIF_SC, pil=PIL_SERIF, pil_cjk=PIL_SERIF_SC,
+                   palette=["#0D7680", "#990F3D", "#593380", "#FF8833", "#96CC28", "#B3A9A0", "#66605C", "#E6D9CE"]),
+    "pop": dict(label="Pop · 小红书色块", bg="#FFF5F3", ink="#1B1B1B", sub="#7A6E6C", faint="#FFDCD6", bar="#FFC9C1",
+                up="#11A35B", down="#FF2442", card="#FFFFFF", a1="#FF2442", a2="#FF8A00", a3="#7A6E6C", hi="#FF2442",
+                round=1.6, stroke=0, band="#FFC9C1",
+                palette=["#FF2442", "#FF8A00", "#FFC300", "#3D7BFF", "#11A35B", "#B25CFF", "#7A6E6C", "#FFDCD6"]),
 }
-FONT = "Inter, 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
-CJK_FONT = "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+THEMES["paper"], THEMES["ink"] = THEMES["light"], THEMES["dark"]   # friendlier aliases
+FONT, CJK_FONT, _STYLE = SANS, SANS_SC, {}
+
+
+def resolve_style(name_or_path):
+    """A built-in style name, or a JSON file: {"base": "light", "bg": "#...", "handle": "@me", "avatar": "me.png", ...}."""
+    if name_or_path in THEMES:
+        return dict(THEMES[name_or_path])
+    with open(name_or_path, encoding="utf-8") as f:
+        custom = json.load(f)
+    t = dict(THEMES[custom.pop("base", "light")])
+    fonts = {"sans": (SANS, SANS_SC, PIL_SANS, PIL_SANS_SC), "serif": (SERIF, SERIF_SC, PIL_SERIF, PIL_SERIF_SC),
+             "mono": (MONO, SANS_SC, PIL_MONO, PIL_SANS_SC)}
+    if custom.get("font") in fonts:
+        t["font"], t["cjk_font"], t["pil"], t["pil_cjk"] = fonts[custom.pop("font")]
+    av = custom.get("avatar")
+    if av and not av.startswith("data:"):
+        import base64, mimetypes
+        path = av if os.path.isabs(av) else os.path.join(os.path.dirname(os.path.abspath(name_or_path)), av)
+        mime = mimetypes.guess_type(path)[0] or "image/png"
+        custom["avatar"] = f"data:{mime};base64," + base64.b64encode(open(path, "rb").read()).decode()
+    t.update(custom)
+    return t
+
+
+def apply_style(t):
+    global FONT, CJK_FONT, _STYLE
+    if t is not _STYLE:
+        FONT, CJK_FONT = t.get("font", SANS), t.get("cjk_font", SANS_SC)
+        _STYLE = t
+        _FONTS.clear()
+
 
 L = {
     "zh": dict(rev="营收", gm="毛利率", om="营业利润率", nm="净利率", ni="净利润", eps="稀释每股收益", yoy="同比",
@@ -83,9 +147,8 @@ def _pil_font(cjk, bold, size):
         f = None
         try:
             from PIL import ImageFont
-            pats = (["NotoSansSC-Bold*", "NotoSansCJK*Bold*", "PingFang*"] if bold else
-                    ["NotoSansSC-Regular*", "NotoSansCJK*Regular*", "PingFang*"]) if cjk else \
-                   (["Inter-ExtraBold*", "Inter-Bold*"] if bold else ["Inter-Medium*", "Inter-Regular*"])
+            src = _STYLE.get("pil_cjk", PIL_SANS_SC) if cjk else _STYLE.get("pil", PIL_SANS)
+            pats = src["bold" if bold else "reg"]
             dirs = [os.path.expanduser("~/.fonts"), os.path.expanduser("~/Library/Fonts"), "/usr/share/fonts",
                     "/Library/Fonts", "/System/Library/Fonts"]
             for d in dirs:
@@ -183,6 +246,7 @@ CURRENT_PAGE = ""
 class Card:
     def __init__(self, w, h, t):
         self.w, self.h, self.t = w, h, t
+        apply_style(t)
         self.o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
                   f'<rect width="{w}" height="{h}" fill="{t["bg"]}"/>']
 
@@ -190,7 +254,14 @@ class Card:
         self.o.extend(parts)
 
     def rect(self, x, y, w, h, fill, rx=0, extra=""):
-        self.o.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w,0):.1f}" height="{max(h,0):.1f}" rx="{rx}" fill="{fill}" {extra}/>')
+        rx = min(rx * self.t.get("round", 1), max(h, 0) / 2, max(w, 0) / 2) if rx else 0
+        self.o.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w,0):.1f}" height="{max(h,0):.1f}" rx="{rx:g}" fill="{fill}" {extra}/>')
+
+    def box(self, x, y, w, h, rx=18):
+        t = self.t
+        sw = t.get("stroke", 1.5)
+        extra = f'stroke="{t.get("card_stroke", t["faint"])}" stroke-width="{sw}"' if sw else ""
+        self.rect(x, y, w, h, t["card"], rx, extra)
 
     def svg(self):
         return "\n".join(self.o + ["</svg>"])
@@ -207,8 +278,15 @@ def footer(c, d, l, lang, P, page=None):
     c.rect(P, fy - 38, c.w - 2 * P, 1.5, t["faint"])
     filing = f'{d["form"].replace(" (derived)", "")} · {d["filed"]} {l["filed"]}'
     c.add(text(P, fy, f'{l["note"]} · {filing}', 18, t["sub"]))
-    right = "earnings-card" + (f"  {CURRENT_PAGE}" if page and CURRENT_PAGE else "")
+    handle = t.get("handle")
+    right = (f"{handle} · " if handle else "") + "earnings-card" + (f"  {CURRENT_PAGE}" if page and CURRENT_PAGE else "")
     c.add(text(c.w - P, fy, right, 18, t["ink"], 700, "end"))
+    if t.get("avatar"):
+        ax = c.w - P - measure(right, 18, 700) - 22
+        cid = f"av{id(c)}"
+        c.add(f'<clipPath id="{cid}"><circle cx="{ax:.1f}" cy="{fy-6}" r="14"/></clipPath>'
+              f'<image href="{t["avatar"]}" x="{ax-14:.1f}" y="{fy-20}" width="28" height="28" '
+              f'preserveAspectRatio="xMidYMid slice" clip-path="url(#{cid})"/>')
 
 
 def small_header(c, d, l, title, subtitle, P):
@@ -240,7 +318,7 @@ def metric_cells(d, l, lang):
 
 def draw_cell(c, x, y, w, h, lab, val, delta, vsize=54):
     t = c.t
-    c.rect(x, y, w, h, t["card"], 18, f'stroke="{t["faint"]}" stroke-width="1.5"')
+    c.box(x, y, w, h, 18)
     c.add(text(x + 28, y + 48, lab, 22, t["sub"], 500))
     c.add(text(x + 28, y + 48 + vsize * 1.18, val, vsize, t["ink"], 800, ls=-1))
     if delta:
@@ -268,7 +346,7 @@ def bars(c, x, y, w, h, vals, labels, lang, highlight_last=True, label_fn=None):
         bx = x + i * (bw + gap)
         bh = max(3, abs(v) / span * usable)
         last = highlight_last and i == n - 1
-        col = t["ink"] if last else t["bar"]
+        col = t.get("hi", t["ink"]) if last else t["bar"]
         if v < 0:
             col = t["down"]
         by = zero - bh if v >= 0 else zero
@@ -525,7 +603,7 @@ def card_wide(d, l, lang, t, headline):
     for i, (lab, val, delta) in enumerate(metric_cells(d, l, lang)):
         x = P + (i % 2) * (cw + g)
         yy = my + (i // 2) * (chh + g)
-        c.rect(x, yy, cw, chh, t["card"], 16, f'stroke="{t["faint"]}" stroke-width="1.5"')
+        c.box(x, yy, cw, chh, 16)
         c.add(text(x + 22, yy + 36, lab, 18, t["sub"], 500))
         c.add(text(x + 22, yy + 92, val, 42, t["ink"], 800, ls=-1))
         if delta:
@@ -566,7 +644,7 @@ def card_mix(d, l, lang, t, labels=None):
     else:
         sub = ""
     y = small_header(c, d, l, l["mix_t"], sub, P)
-    pal = PALETTE["dark" if t["bg"] == THEMES["dark"]["bg"] else "light"]
+    pal = t.get("palette") or PALETTE["light"]
     avail = H - 130 - y
     max_rows = [min(len(g[1]), 6 if len(groups) == 1 else 5) for g in groups]
     per_group_fixed = 120
@@ -659,7 +737,7 @@ def card_guide(d, l, lang, t, g):
     rh = 108
     for k, it in enumerate(nxt[:4]):
         ry = y + k * (rh + 16)
-        c.rect(P, ry, W - 2 * P, rh, t["card"], 16, f'stroke="{t["faint"]}" stroke-width="1.5"')
+        c.box(P, ry, W - 2 * P, rh, 16)
         c.add(text(P + 28, ry + 42, it["metric"], 22, t["sub"], 500))
         c.add(text(P + 28, ry + 88, _grange(it, lang), 38, t["ink"], 800, ls=-0.5))
         if it.get("base") is not None:
@@ -693,7 +771,7 @@ def card_guide(d, l, lang, t, g):
             # range band + actual marker
             bx0, bx1 = sx(lo), sx(hi)
             c.rect(P + 260, y + 30, W - 2 * P - 300, 4, t["faint"], 2)
-            band = t["bar"] if t["bg"] == THEMES["light"]["bg"] else t["a3"]
+            band = t.get("band", t["bar"])
             c.rect(bx0, y + 18, max(bx1 - bx0, 6), 28, band, 6)
             ax = sx(act)
             c.add(f'<circle cx="{ax:.1f}" cy="{y+32}" r="11" fill="{t["ink"]}"/>')
@@ -728,14 +806,15 @@ if __name__ == "__main__":
     ap.add_argument("--out", required=True, help="output prefix, e.g. ./NVDA")
     ap.add_argument("--lang", default="zh", choices=["zh", "en"])
     ap.add_argument("--headline", default="")
-    ap.add_argument("--theme", default="light", choices=list(THEMES))
+    ap.add_argument("--theme", "--style", dest="theme", default="light",
+                    help="built-in style (light/paper, dark/ink, mono, terminal, salmon, pop) or a custom style JSON file")
     ap.add_argument("--cards", default="cover,mix,profit,trend,cash,guide,wide")
     ap.add_argument("--guidance", default="", help="guidance.json written by the agent from fetch_guidance.py output")
     ap.add_argument("--labels", default="", help="JSON file mapping segment labels to display names (e.g. Chinese)")
     ap.add_argument("--png", action="store_true")
     a = ap.parse_args()
     d = json.load(open(a.data))
-    t, l = THEMES[a.theme], L[a.lang]
+    t, l = resolve_style(a.theme), L[a.lang]
     labels = json.load(open(a.labels)) if a.labels else {}
     names = [n for n in a.cards.split(",") if n]
     if not (d.get("segments") or {}) and "mix" in names:
