@@ -145,11 +145,11 @@ def apply_style(t):
 
 L = {
     "zh": dict(rev="营收", gm="毛利率", om="营业利润率", nm="净利率", ni="净利润", eps="稀释每股收益", yoy="同比",
-               ended="截至", pts="个百分点", trend="近 8 个季度营收（亿美元）",
+               ended="截至", pts="个百分点", trend="近 {n} 个季度营收（亿美元）",
                note="数据来源 SEC EDGAR · 不构成投资建议", filed="披露",
                profit_t="营收是怎么变成利润的", cost="营业成本", gp="毛利", rnd="研发", sga="销售及管理",
                other_opex="其他经营费用", oi="营业利润", tax="所得税", other="其他收支", of_rev="占营收",
-               trend_t="8 个季度，利润率怎么走", mix_t="钱从哪里来", guide_t="管理层怎么看下季度", next_g="下季指引", kept="上季指引兑现了吗",
+               trend_t="{n} 个季度，利润率怎么走", mix_t="钱从哪里来", guide_t="管理层怎么看下季度", next_g="下季指引", kept="上季指引兑现了吗",
                vs_now="较本季", beat="超出指引上限", inline="落在指引区间内", miss="低于指引下限", actual="实际",
                g_src="指引来自公司财报新闻稿（8-K）", by_product="按业务", by_segment="按分部", by_geo="按地区",
                share="占比", other_seg="其他", margins="利润率", ni_bars="净利润（亿美元）",
@@ -157,11 +157,11 @@ L = {
                buyback="回购", div="分红", returned="回馈股东", cashpile="现金及短期投资", cashonly="现金及等价物", capex_ocf="资本开支 / 经营现金流", fcf_bars="自由现金流（亿美元）",
                fcf_note="自由现金流 = 经营现金流 − 资本开支", n_per="个季度", cur="本季", all_costs="成本、费用及税"),
     "en": dict(rev="Revenue", gm="Gross margin", om="Operating margin", nm="Net margin", ni="Net income", eps="Diluted EPS",
-               yoy="YoY", ended="Quarter ended", pts="pts", trend="Revenue, last 8 quarters ($B)",
+               yoy="YoY", ended="Quarter ended", pts="pts", trend="Revenue, last {n} quarters ($B)",
                note="Data: SEC EDGAR · Not investment advice", filed="filed",
                profit_t="From revenue to profit", cost="Cost of revenue", gp="Gross profit", rnd="R&D", sga="SG&A",
                other_opex="Other operating costs", oi="Operating income", tax="Income tax", other="Other income", of_rev="of revenue",
-               trend_t="8 quarters of margins", mix_t="Where the money comes from", guide_t="What management expects next", next_g="Next-quarter outlook",
+               trend_t="{n} quarters of margins", mix_t="Where the money comes from", guide_t="What management expects next", next_g="Next-quarter outlook",
                kept="Did they hit last quarter's outlook?", vs_now="vs this qtr", beat="Above the range", inline="Within the range",
                miss="Below the range", actual="Actual", g_src="Outlook from the company's earnings release (8-K)", by_product="By business",
                by_segment="By segment", by_geo="By region", share="share", other_seg="Other", margins="Margins", ni_bars="Net income ($B)",
@@ -267,6 +267,15 @@ def measure(s, size, weight=400, ls=0):
             w += f.getlength(r) if f else sum(size if ord(ch) > 0x2E80 else size * 0.6 for ch in r)
         w += ls * len(r)
     return w
+
+
+def clip(s, max_w, size, weight=400, ls=0):
+    """s, cut with an ellipsis if it is wider than max_w."""
+    if measure(s, size, weight, ls) <= max_w:
+        return s
+    while len(s) > 2 and measure(s + "…", size, weight, ls) > max_w:
+        s = s[:-1]
+    return s.rstrip(" ,.") + "…"
 
 
 def fit(s, max_w, size, weight=400, ls=0, floor=14):
@@ -375,6 +384,9 @@ def company_name(d):
     return n.title() if n.isupper() else n
 
 
+_AV = [0]
+
+
 def footer(c, d, l, lang, P, page=None):
     t = c.t
     fy = c.h - 56
@@ -388,7 +400,8 @@ def footer(c, d, l, lang, P, page=None):
     c.add(text(c.w - P, fy, right, 18, t["ink"], 700, "end"))
     if t.get("avatar"):
         ax = c.w - P - measure(right, 18, 700) - 22
-        cid = f"av{id(c)}"
+        _AV[0] += 1   # unique per card, so many cards inlined in one web page don't share a clip path
+        cid = f"av{_AV[0]}"
         c.add(f'<clipPath id="{cid}"><circle cx="{ax:.1f}" cy="{fy-6}" r="14"/></clipPath>'
               f'<image href="{t["avatar"]}" x="{ax-14:.1f}" y="{fy-20}" width="28" height="28" '
               f'preserveAspectRatio="xMidYMid slice" clip-path="url(#{cid})"/>')
@@ -396,22 +409,29 @@ def footer(c, d, l, lang, P, page=None):
 
 def small_header(c, d, l, title, subtitle, P):
     t = c.t
+    right = f'{d.get("fiscal_label","")} · {l["ended"]} {d["period_end"]}'
     if c.h <= 1080:   # 1:1 and 16:9: a tighter header leaves room for the chart
+        tw = measure(d["ticker"], 30, 800, -0.5)
+        room = c.w - 2 * P - tw - 14 - measure(right, 18, 500) - 24
         c.add(text(P, 100, d["ticker"], 30, t["ink"], 800, ls=-0.5))
-        c.add(text(P + measure(d["ticker"], 30, 800, -0.5) + 14, 100, company_name(d), 20, t["sub"], 500))
-        c.add(text(c.w - P, 100, f'{d.get("fiscal_label","")} · {l["ended"]} {d["period_end"]}', 18, t["sub"], 500, "end"))
+        c.add(text(P + tw + 14, 100, clip(company_name(d), room, 20, 500), 20, t["sub"], 500))
+        c.add(text(c.w - P, 100, right, 18, t["sub"], 500, "end"))
         c.rect(P, 122, c.w - 2 * P, 2, t["ink"])
         c.add(text(P, 190, title, fit(title, c.w - 2 * P, 48, 800, -1), t["ink"], 800, ls=-1))
         if subtitle:
-            c.add(text(P, 236, subtitle, fit(subtitle, c.w - 2 * P, 24, 500), t["sub"], 500))
+            sz = fit(subtitle, c.w - 2 * P, 24, 500, floor=20)
+            c.add(text(P, 236, clip(subtitle, c.w - 2 * P, sz, 500), sz, t["sub"], 500))
         return 284
+    tw = measure(d["ticker"], 34, 800, -0.5)
+    room = c.w - 2 * P - tw - 16 - measure(right, 20, 500) - 24
     c.add(text(P, 112, d["ticker"], 34, t["ink"], 800, ls=-0.5))
-    c.add(text(P + measure(d["ticker"], 34, 800, -0.5) + 16, 112, company_name(d), 22, t["sub"], 500))
-    c.add(text(c.w - P, 112, f'{d.get("fiscal_label","")} · {l["ended"]} {d["period_end"]}', 20, t["sub"], 500, "end"))
+    c.add(text(P + tw + 16, 112, clip(company_name(d), room, 22, 500), 22, t["sub"], 500))
+    c.add(text(c.w - P, 112, right, 20, t["sub"], 500, "end"))
     c.rect(P, 140, c.w - 2 * P, 2, t["ink"])
     c.add(text(P, 224, title, 54, t["ink"], 800, ls=-1))
     if subtitle:
-        c.add(text(P, 278, subtitle, 26, t["sub"], 500))
+        sz = fit(subtitle, c.w - 2 * P, 26, 500, floor=21)
+        c.add(text(P, 278, clip(subtitle, c.w - 2 * P, sz, 500), sz, t["sub"], 500))
     return 330
 
 
@@ -865,7 +885,7 @@ def card_wide(d, l, lang, t, headline):
             c.add(text(x + cw - 20, yy + 36, s_.lstrip("·"), 17, col, 700 if good is not None else 500, "end"))
     rx = P + left_w + 70
     rw = W - P - rx
-    c.add(text(rx, 252, l["trend"], 20, t["sub"], 500))
+    c.add(text(rx, 252, l["trend"].format(n=len(d["trend"])), 20, t["sub"], 500))
     bars(c, rx, 272, rw, my + 2 * chh + g - 272 - 46, [q["revenue"] for q in d["trend"]],
          [qlabel(q["end"]) for q in d["trend"]], lang)
     footer(c, d, l, lang, P)
@@ -933,17 +953,18 @@ def card_mix(d, l, lang, t, labels=None, size=None):
             c.rect(x, by, max(w - 3, 1), 30, pal[k % len(pal)], 4)
             x += w
         y = by + 30 + 34
-        name_w = cw - 450
         for k, it in enumerate(items):
             ry = y + k * rh
             c.rect(x0, ry - 14, 14, 14, pal[k % len(pal)], 3)
             name = labels.get(it["label"], it["label"])
+            mv = money(it["value"], lang)
+            name_w = min(cw - 450, cw - 280 - measure(mv, 26, 800) - 40)   # never run into the amount
             if measure(name, 24, 500) > name_w:
                 while measure(name + "…", 24, 500) > name_w and len(name) > 4:
                     name = name[:-1]
                 name += "…"
             c.add(text(x0 + 28, ry, name, 24, t["ink"], 500))
-            c.add(text(x0 + cw - 280, ry, money(it["value"], lang), 26, t["ink"], 800, "end"))
+            c.add(text(x0 + cw - 280, ry, mv, 26, t["ink"], 800, "end"))
             c.add(text(x0 + cw - 160, ry, f'{(it.get("share") or 0)*100:.0f}%', 22, t["sub"], 500, "end"))
             yy = it.get("yoy")
             if yy is not None:

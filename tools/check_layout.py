@@ -5,6 +5,7 @@ Uses render.measure() with the style that rendered the card, so run it with the 
 (on a machine without them widths are estimates and the check is only approximate).
 
   python3 tools/check_layout.py            # all fixtures x ratios x styles x langs, prints problems
+  python3 tools/check_layout.py --data     # every ticker in docs/data (quarter + annual), light + terminal
 """
 import os, re, sys, itertools
 import xml.etree.ElementTree as ET
@@ -45,7 +46,46 @@ def problems(svg, margin=24, slack=2):
     return errs
 
 
+def main_data():
+    """Every precomputed ticker in docs/data, both periods, all ratios, both languages."""
+    import glob, json
+    ddir = os.path.join(ROOT, "docs", "data")
+    common = json.load(open(os.path.join(ddir, "labels-zh.json"), encoding="utf-8"))
+    n = bad = 0
+    for f in sorted(glob.glob(os.path.join(ddir, "*.json"))):
+        tk = os.path.basename(f)[:-5]
+        if not tk.replace("-", "").isupper():
+            continue
+        rec = json.load(open(f, encoding="utf-8"))
+        lab = dict(common)
+        lp = os.path.join(ddir, "labels", tk + ".json")
+        if os.path.exists(lp):
+            lab.update(json.load(open(lp, encoding="utf-8")))
+        for period in ("quarter", "annual"):
+            d = rec.get(period)
+            if not d:
+                continue
+            for lang in ("en", "zh"):
+                gp = os.path.join(ddir, "guide", f"{tk}-guide-{lang}.json")
+                g = json.load(open(gp, encoding="utf-8")) if os.path.exists(gp) and period == "quarter" else None
+                if g and g["prior"]["period"] != d["fiscal_label"]:
+                    g = None
+                for ratio in R.RATIOS:
+                    for st in ("light", "terminal"):
+                        t = R.build_style({"base": st, "handle": "@handle"})
+                        head = "Revenue up, margins steady" if lang == "en" else "营收增长，利润率稳住"
+                        for name, svg in R.render_cards(d, lang, t, None, ratio, head, g, lab if lang == "zh" else {}):
+                            n += 1
+                            for e in problems(svg):
+                                bad += 1
+                                print(f"{tk} {period} {lang} {ratio} {st} {name}: {e}")
+    print(f"{n} cards checked, {bad} problems")
+    return 1 if bad else 0
+
+
 def main():
+    if "--data" in sys.argv:
+        return main_data()
     sys.path.insert(0, os.path.join(ROOT, "tests"))
     from helpers import load, opt
     fixtures = sys.argv[1:] or ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA",
