@@ -1,154 +1,154 @@
 <div align="center">
 
-# earnings-card
+# earnings-card · 财报卡
 
-### Type a ticker. Get a carousel of earnings cards worth posting.
+### 输入一个股票代码，得到一整套能直接发出去的财报图。
 
-An agent skill that turns the latest SEC filing of any US-listed company into **7 editorial-grade cards**: headline, revenue mix, profit waterfall, margin trend, cash flow, management guidance, and a landscape cover.
+一个 Agent skill：读取美股公司最新的 SEC 财报，生成 **7 张杂志质感的卡片**：一句话结论、钱从哪里来、利润拆解、利润率趋势、现金流、管理层指引，外加一张横版封面。
 
-**English** · [简体中文](./README.zh-CN.md)
+**简体中文** · [English](./README.en.md)
 
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
-![Data](https://img.shields.io/badge/data-SEC%20EDGAR-8C6A3F?style=flat-square)
-![API key](https://img.shields.io/badge/API%20key-not%20needed-1E7A4C?style=flat-square)
-![Works with](https://img.shields.io/badge/works%20with-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20any%20agent-6F6A60?style=flat-square)
+![Data](https://img.shields.io/badge/数据-SEC%20EDGAR-8C6A3F?style=flat-square)
+![API key](https://img.shields.io/badge/API%20key-不需要-1E7A4C?style=flat-square)
+![Works with](https://img.shields.io/badge/适用-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20任意%20Agent-6F6A60?style=flat-square)
 
-![NVDA earnings cards](examples/en/preview.png)
+![英伟达财报卡](examples/zh/preview.png)
 
 </div>
 
 ```
-> Make an earnings card for NVDA
+> 给 NVDA 做一套财报卡
 ```
 
-That's the whole prompt. The agent pulls the 10-Q straight from SEC EDGAR, writes a one-line takeaway from the numbers, and renders the set as PNG, SVG and one HTML page.
+就这一句。Agent 直接从 SEC EDGAR 拉取季报，只根据数字写一句结论，输出 PNG、SVG 和一个 HTML 汇总页。
 
 ---
 
-## Why
+## 为什么做这个
 
-Earnings season is a wall of tables, press-release adjectives and screenshots of Bloomberg terminals. What people actually share is **one clean image that says what happened**.
+每到财报季，信息流里全是表格、新闻稿里的形容词和终端截图。真正会被转发的，是**一张一眼看懂发生了什么的图**。
 
-earnings-card makes that image for you, from the filing itself:
+earnings-card 直接从财报原文帮你做这张图：
 
-- **Official data only.** Every number comes from the company's own SEC filing (XBRL). No scraping, no paid API, no key.
-- **A story, not a spreadsheet.** Seven cards that read like a magazine spread, sized 1080×1350 for X, Threads, Instagram and Xiaohongshu carousels.
-- **Things screenshots can't show.** Revenue by business and by region, parsed from the filing's own XBRL. Last quarter's guidance checked against what actually happened.
-- **Honest headlines.** The takeaway is written only from numbers in the data. No price targets, no buy/sell calls, no invented reasons.
+- **只用官方数据。** 每个数字都来自公司自己提交给 SEC 的财报（XBRL）。不爬网页，不用付费 API，不需要 key。
+- **讲故事，不是贴表格。** 7 张卡片像一篇杂志专题，竖版 1080×1350，直接发小红书、X、朋友圈多图。
+- **截图给不了的东西。** 分业务、分地区营收，直接从财报原始 XBRL 里拆；上季度管理层给的指引，和这季实际结果放在一起对照。
+- **结论克制。** 一句话结论只基于数据里的数字：不给目标价，不荐股，不编造原因。
 
-## The seven cards
-
-<table>
-<tr>
-<td width="33%"><img src="examples/en/NVDA-1-cover.png"><br><b>1 · Cover</b><br>One-line takeaway, revenue and YoY, 8-quarter bars, margins, net income, EPS</td>
-<td width="33%"><img src="examples/en/NVDA-2-mix.png"><br><b>2 · Where the money comes from</b><br>Revenue by business and by region, with share and YoY</td>
-<td width="33%"><img src="examples/en/NVDA-3-profit.png"><br><b>3 · Profit waterfall</b><br>From every $100 of revenue down to net income</td>
-</tr>
-<tr>
-<td><img src="examples/en/NVDA-4-trend.png"><br><b>4 · Margin trend</b><br>Gross, operating and net margin over 8 quarters</td>
-<td><img src="examples/en/NVDA-5-cash.png"><br><b>5 · Cash flow</b><br>Operating cash, capex, free cash flow, buybacks, dividends, cash pile</td>
-<td><img src="examples/en/NVDA-6-guide.png"><br><b>6 · Guidance</b><br>Next quarter's outlook, and did they hit last quarter's?</td>
-</tr>
-</table>
-
-**7 · Landscape cover**, 1600×900 for X posts, articles and slides:
-
-![NVDA landscape card](examples/en/NVDA-7-wide.png)
-
-## Dark mode, any company
-
-![Dark theme: TSLA, AMZN](examples/en/preview-dark.png)
+## 七张卡
 
 <table>
 <tr>
-<td width="50%"><img src="examples/en/AAPL-1-mix.png"><br>Apple: iPhone brought in 50% of revenue, up 21.7%</td>
-<td width="50%"><img src="examples/en/AMZN-2-guide.png"><br>Amazon: revenue and operating income both landed above their own guidance</td>
+<td width="33%"><img src="examples/zh/NVDA-1-cover.png"><br><b>1 · 封面</b><br>一句话结论、营收与同比、近 8 季营收、利润率、净利润、EPS</td>
+<td width="33%"><img src="examples/zh/NVDA-2-mix.png"><br><b>2 · 钱从哪里来</b><br>分业务、分地区营收，占比和同比</td>
+<td width="33%"><img src="examples/zh/NVDA-3-profit.png"><br><b>3 · 利润拆解</b><br>每 100 美元营收，一步步变成多少净利润</td>
+</tr>
+<tr>
+<td><img src="examples/zh/NVDA-4-trend.png"><br><b>4 · 利润率趋势</b><br>8 个季度的毛利率、营业利润率、净利率</td>
+<td><img src="examples/zh/NVDA-5-cash.png"><br><b>5 · 现金流</b><br>经营现金流、资本开支、自由现金流、回购分红、账上现金</td>
+<td><img src="examples/zh/NVDA-6-guide.png"><br><b>6 · 管理层指引</b><br>下季指引怎么说，上季指引兑现了没有</td>
 </tr>
 </table>
 
-## Install
+**7 · 横版封面**，1600×900，适合 X、公众号头图和 PPT：
+
+![英伟达横版卡](examples/zh/NVDA-7-wide.png)
+
+## 深色主题，任何公司
+
+![深色主题：特斯拉、亚马逊](examples/zh/preview-dark.png)
+
+<table>
+<tr>
+<td width="50%"><img src="examples/zh/AAPL-1-mix.png"><br>苹果：iPhone 贡献一半营收，同比增长 21.7%</td>
+<td width="50%"><img src="examples/zh/AMZN-2-guide.png"><br>亚马逊：营收和营业利润都超出了自己给的指引上限</td>
+</tr>
+</table>
+
+## 安装
 
 ```bash
 npx skills add TTNAN/earnings-card
 ```
 
-Or copy `skills/earnings-card` into your agent's skills folder (Claude Code: `~/.claude/skills/`, Codex: `~/.codex/skills/`).
+或者把 `skills/earnings-card` 复制到你的 Agent skills 目录（Claude Code：`~/.claude/skills/`，Codex：`~/.codex/skills/`）。
 
-Needs Python 3.9+. For PNG export: `pip install cairosvg`. Without it you still get SVG and HTML.
+需要 Python 3.9+。导出 PNG 需要 `pip install cairosvg`，不装也能输出 SVG 和 HTML。
 
-SEC asks every client to identify itself, so set a contact once:
+SEC 要求每个请求带上联系方式，设置一次即可：
 
 ```bash
 export SEC_USER_AGENT="your-name you@example.com"
 ```
 
-## Use
+## 用法
 
-Talk to your agent:
+直接对 Agent 说：
 
 ```
-Make an earnings card for AAPL
-Earnings cards for MSFT, dark theme
 给 NVDA 做一套中文财报卡
-Just the cover and cash flow cards for TSLA
+苹果最新财报，做成深色的
+只要特斯拉的封面和现金流两张
+Make an earnings card for AAPL
 ```
 
-Or run the scripts yourself:
+也可以自己跑脚本：
 
 ```bash
 cd skills/earnings-card/scripts
 python3 fetch_sec.py NVDA --out nvda.json
-python3 render.py nvda.json --out NVDA --headline "Revenue doubled, margins held at 75%" --lang en --png
+python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利率稳在 75%" --lang zh --png
 ```
 
-| Option | What it does |
+| 参数 | 作用 |
 |---|---|
-| `--lang en\|zh` | English or Chinese cards |
-| `--theme light\|dark` | Warm paper or ink black |
-| `--cards cover,mix,profit,trend,cash,guide,wide` | Pick the cards you want |
-| `--guidance guidance.json` | Add the guidance card (the agent writes this from the earnings release) |
-| `--labels labels.json` | Rename segments, e.g. into Chinese |
-| `--png` | Export PNG next to the SVG |
+| `--lang en\|zh` | 英文或中文 |
+| `--theme light\|dark` | 暖白纸感或墨黑 |
+| `--cards cover,mix,profit,trend,cash,guide,wide` | 选择要哪几张 |
+| `--guidance guidance.json` | 加上指引卡（Agent 从财报新闻稿里整理） |
+| `--labels labels.json` | 给分部改名，比如翻成中文 |
+| `--png` | 同时导出 PNG |
 
-## How it works
+## 原理
 
 ```
-ticker ─▶ SEC EDGAR companyfacts ─▶ 8 quarters of GAAP numbers
-       └▶ the 10-Q/10-K XBRL itself ─▶ revenue by business and region
-       └▶ the 8-K earnings release   ─▶ guidance text ─▶ agent turns it into numbers
+股票代码 ─▶ SEC EDGAR companyfacts ─▶ 近 8 季 GAAP 数据
+        └▶ 10-Q/10-K 原始 XBRL     ─▶ 分业务、分地区营收
+        └▶ 8-K 财报新闻稿          ─▶ 指引原文 ─▶ Agent 整理成数字
                                         │
-                     agent writes one headline from the data only
+                        Agent 只根据数据写一句结论
                                         │
-                     render.py ─▶ 7 cards · SVG · PNG · HTML
+                        render.py ─▶ 7 张卡 · SVG · PNG · HTML
 ```
 
-- Q4 figures and quarterly cash flow are derived the standard way (full year minus the first three quarters, year-to-date differences) and labeled as derived.
-- Segment splits pick the most detailed set of members that adds up to total revenue, so subtotals never double-count.
+- 第四季度和单季现金流按标准方法推算（全年减前三季、累计值差分），并标注为推算。
+- 分部拆分会自动挑出加总等于总营收、颗粒度最细的一组，不会把小计重复算进去。
 
-## Limits
+## 限制
 
-- US companies that file with the SEC. A-shares and Hong Kong are on the roadmap.
-- GAAP numbers, which can differ from the adjusted figures in press releases.
-- Revenue mix needs a 10-Q; for a fiscal Q4 (reported in the 10-K) that card is skipped.
-- Guidance only when the company puts numbers in its earnings release. Apple, Microsoft and Tesla give theirs on the call, so that card is skipped for them.
+- 仅支持在 SEC 申报的美股公司，A 股、港股在路线图上。
+- GAAP 口径，可能和新闻稿里的调整后数字不同。
+- 分部营收需要 10-Q；财年第四季度（年报 10-K）这张卡会跳过。
+- 只有公司在新闻稿里给出数字指引时才有指引卡。苹果、微软、特斯拉只在电话会上讲，这张卡会自动跳过。
 
-## Roadmap
+## 路线图
 
-- [ ] Beat / miss vs consensus (bring your own estimates)
-- [ ] Banks and insurers layout
-- [ ] Online gallery for every Mag 7 report
-- [ ] A-shares and Hong Kong stocks
+- [ ] 对比市场一致预期，看超预期还是不及预期（自带预期值）
+- [ ] 银行、保险公司专用版式
+- [ ] 七巨头财报在线画廊
+- [ ] A 股、港股
 
-Ideas and bug reports are welcome in issues.
+欢迎在 issue 里提想法和 bug。
 
-## Buy me a coffee
+## 请我喝杯咖啡
 
-If this saved you some time, feel free to buy me a coffee. ☕
+如果这个项目帮你省了点时间，欢迎请我喝杯咖啡。☕
 
-| Alipay | WeChat Pay |
-| ------ | ---------- |
+| 支付宝 | 微信支付 |
+| ------ | -------- |
 | <img src="assets/alipay.jpg" width="220"> | <img src="assets/wechat-pay.png" width="220"> |
 
-## License
+## 协议
 
-MIT, see [LICENSE](LICENSE). Not investment advice.
+MIT，见 [LICENSE](LICENSE)。不构成投资建议。
