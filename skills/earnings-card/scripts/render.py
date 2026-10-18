@@ -1201,7 +1201,7 @@ def line_chart(c, x, y, w, h, series, labels, lang):
             c.add(f'<polyline points="{a + 13:.1f},{dy:.1f} {lx - 4:.1f},{ly - 12:.1f}" fill="none" stroke="{col}" stroke-width="1.2"/>')
         c.add(text(lx, ly - 2, f"{v*100:.1f}%", 26, col, 800))
         c.add(text(lx, ly + 20, name, 15, t["sub"], BODY_W))
-    for i in (0, n - 1):
+    for i in sorted({0, n - 1}):   # one period only: one label, not the same one twice
         c.add(text(px(i), y + h + 32, labels[i], 17, t["ink"] if i == n - 1 else t["sub"], 600 if i == n - 1 else BODY_W, "middle"))
 
 
