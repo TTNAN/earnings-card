@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>支持的股票 · earnings-card</title>
+<meta name="description" content="earnings-card 财报卡生成器支持的美股列表：代码、公司、行业、可选的季报和年报。Every ticker the earnings card generator supports.">
+<link rel="stylesheet" href="../app.css">
+<style>
+.wrap{max-width:1080px;margin:0 auto;padding:24px 24px 60px}
+.wrap h1{font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:0 0 6px;font-weight:800}
+.wrap .lede{max-width:720px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 12px}
+.tools input{flex:1 1 240px;font-size:16px}
+.tools select{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:9px 10px;font-size:14px}
+.secs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.secs .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.secs .chip i{font-style:normal;opacity:.6;margin-left:4px;font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);padding:8px 10px;border-bottom:2px solid var(--ink);white-space:nowrap}
+th button{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+th button.on::after{content:" ↓"}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.row{cursor:pointer}
+tr.row:hover td{background:var(--card)}
+td.tk a{font-weight:800;font-size:15px;text-decoration:none}
+td .zh{font-weight:600}
+td .en{color:var(--mute);font-size:13px}
+td .lbl{color:var(--mute);font-size:12px}
+td.go a{white-space:nowrap;font-weight:700;font-size:13px;border:1.5px solid var(--ink);border-radius:999px;padding:3px 10px;text-decoration:none}
+td.go a:hover{background:var(--ink);color:var(--paper)}
+tr.grp td{background:none;border-bottom:1.5px solid var(--ink);padding-top:22px;font-weight:800;font-size:15px}
+tr.grp td i{font-style:normal;color:var(--mute);font-weight:500;font-size:13px;margin-left:6px}
+.warnp{display:inline-block;margin-top:3px;font-size:12px;color:#5E4528;background:#8C6A3F17;border-radius:6px;padding:1px 6px}
+.none{color:var(--mute);padding:28px 10px}
+@media (max-width:720px){
+  .wrap{padding:18px 14px 50px}
+  .col-sec,.col-a{display:none}
+  td,th{padding:8px 6px}
+  td.go a{padding:3px 8px}
+  td.per{white-space:nowrap;font-size:13px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="../"><b>earnings-card</b><span data-i="brand"></span></a>
+  <nav>
+    <a href="../" id="navGen" data-i="generator"></a>
+    <a href="../gallery/" data-i="gallery"></a>
+    <a href="https://github.com/TTNAN/earnings-card" target="_blank" rel="noopener">GitHub</a>
+    <div class="seg small" id="uilang"><button data-v="zh">中文</button><button data-v="en">EN</button></div>
+  </nav>
+</header>
+<main class="wrap">
+  <h1 data-i="title"></h1>
+  <p class="lede" id="lede"></p>
+  <div class="tools">
+    <input id="q" autocomplete="off" spellcheck="false" data-ph="search" aria-label="search">
+    <select id="sort" aria-label="sort"><option value="sector" data-i="bySector"></option><option value="ticker" data-i="byTicker"></option><option value="name" data-i="byName"></option></select>
+  </div>
+  <div class="secs" id="secs"></div>
+  <table>
+    <thead><tr>
+      <th><button data-s="ticker" data-i="cTicker"></button></th>
+      <th><button data-s="name" data-i="cName"></button></th>
+      <th class="col-sec"><button data-s="sector" data-i="cSector"></button></th>
+      <th data-i="cQ"></th><th class="col-a" data-i="cA"></th><th></th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <footer class="foot" data-i="foot"></footer>
+</main>
+<script>
+"use strict";
+const SECTORS = {
+  zh: {tech: "信息技术", comm: "通信服务", disc: "可选消费", staples: "必需消费", health: "医疗保健", fin: "金融",
+    ind: "工业", energy: "能源", util: "公用事业", re: "房地产", materials: "原材料", other: "其他"},
+  en: {tech: "Information Technology", comm: "Communication Services", disc: "Consumer Discretionary", staples: "Consumer Staples",
+    health: "Health Care", fin: "Financials", ind: "Industrials", energy: "Energy", util: "Utilities", re: "Real Estate",
+    materials: "Materials", other: "Other"},
+};
+const T = {
+  zh: {brand: "财报卡生成器", generator: "生成器", gallery: "画廊", title: "支持的股票", search: "搜代码、英文名或中文名，例如 NVDA / 苹果",
+    lede: n => `目前覆盖 ${n} 只美股（标普 100 起步），数据每晚从 SEC EDGAR 自动更新。点任意一行，直接用这只股票生成财报卡。想加股票可以在 GitHub 提 issue 或改 tools/tickers.txt。`,
+    bySector: "按行业分组", byTicker: "按代码排序", byName: "按名称排序", all: "全部",
+    cTicker: "代码", cName: "公司", cSector: "行业", cQ: "季报", cA: "年报", go: "生成 →", none: "没有匹配的股票。",
+    nq: n => `${n} 个季度`, na: n => `${n} 个财年`, latest: "最新 ", noData: "暂无",
+    partial: {no_quarter: "只有年报", no_annual: "只有季报", few_quarter: "季度较少", miss: f => `缺${f}`},
+    fields: {revenue: "营收", net_income: "净利润", eps: "EPS", ocf: "经营现金流", fcf: "自由现金流"},
+    foot: '数据来自 SEC EDGAR（GAAP 口径），不构成投资建议。<a href="https://github.com/TTNAN/earnings-card">earnings-card</a> 是开源项目。'},
+  en: {brand: "Earnings card generator", generator: "Generator", gallery: "Gallery", title: "Supported tickers", search: "Search ticker or company, e.g. NVDA / Apple",
+    lede: n => `${n} US stocks are covered (starting with the S&P 100), refreshed nightly from SEC EDGAR. Click a row to make cards for that stock. To add one, open an issue or edit tools/tickers.txt on GitHub.`,
+    bySector: "Group by sector", byTicker: "Sort by ticker", byName: "Sort by name", all: "All",
+    cTicker: "Ticker", cName: "Company", cSector: "Sector", cQ: "Quarterly", cA: "Annual", go: "Make cards →", none: "No ticker matches.",
+    nq: n => `${n} quarters`, na: n => `${n} years`, latest: "latest ", noData: "none",
+    partial: {no_quarter: "annual only", no_annual: "quarterly only", few_quarter: "few quarters", miss: f => `no ${f}`},
+    fields: {revenue: "revenue", net_income: "net income", eps: "EPS", ocf: "op. cash flow", fcf: "FCF"},
+    foot: 'Data from SEC EDGAR (GAAP). Not investment advice. <a href="https://github.com/TTNAN/earnings-card">earnings-card</a> is open source.'},
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const qs = new URLSearchParams(location.search);
+const S = {ui: qs.get("ui") || localStorage.ecui || "zh", sort: qs.get("sort") || "sector", sec: qs.get("sector") || "", q: qs.get("q") || ""};
+if (S.ui !== "en") S.ui = "zh";
+let rows = [];
+const tr = () => T[S.ui];
+const genURL = tk => "../?t=" + encodeURIComponent(tk) + (S.ui === "en" ? "&ui=en" : "");
+function partialText(r) {
+  const t = tr();
+  return (r.partial || []).map(p => {
+    if (t.partial[p]) return t.partial[p];
+    const [, f] = p.split(":");
+    return t.partial.miss(f.split(",").map(x => t.fields[x] || x).join(S.ui === "zh" ? "、" : ", "));
+  }).filter((x, i, a) => a.indexOf(x) === i).join(S.ui === "zh" ? "；" : "; ");
+}
+function matches(r) {
+  const v = S.q.trim().toLowerCase();
+  if (S.sec && r.sector !== S.sec) return false;
+  if (!v) return true;
+  return r.t.toLowerCase().startsWith(v) || r.t.replace(".", "").toLowerCase().startsWith(v.replace(/[.\-]/g, ""))
+    || r.name.toLowerCase().includes(v) || (r.zh || "").toLowerCase().includes(v);
+}
+function rowHTML(r) {
+  const t = tr(), sec = SECTORS[S.ui][r.sector] || r.sector, p = partialText(r);
+  const zh = r.zh && r.zh !== r.t && S.ui === "zh" ? `<div class="zh">${esc(r.zh)}</div>` : "";
+  const per = (list, f) => list.length ? `${f(list.length)}<div class="lbl">${t.latest}${esc(list[list.length - 1])}</div>` : `<span class="lbl">${t.noData}</span>`;
+  return `<tr class="row" data-t="${esc(r.t)}"><td class="tk"><a href="${genURL(r.t)}">${esc(r.t)}</a></td>
+    <td>${zh}<div class="${zh ? "en" : ""}">${esc(r.name)}</div>${p ? `<span class="warnp">${esc(p)}</span>` : ""}</td>
+    <td class="col-sec">${esc(sec)}</td><td class="per">${per(r.q, t.nq)}</td><td class="col-a">${per(r.a, t.na)}</td>
+    <td class="go"><a href="${genURL(r.t)}">${t.go}</a></td></tr>`;
+}
+function draw() {
+  const t = tr(), names = SECTORS[S.ui];
+  const list = rows.filter(matches);
+  const key = S.sort === "name" ? (r => (S.ui === "zh" && r.zh ? r.zh : r.name)) : (r => r.t);
+  const all = {};
+  rows.forEach(r => all[r.sector] = (all[r.sector] || 0) + 1);   // groups in the same order as the sector chips
+  list.sort((a, b) => S.sort === "sector" ? (all[b.sector] - all[a.sector]) || a.sector.localeCompare(b.sector) || a.t.localeCompare(b.t)
+    : key(a).localeCompare(key(b), S.ui === "zh" ? "zh-CN" : "en"));
+  let html = "", lastSec = null;
+  const counts = {};
+  list.forEach(r => counts[r.sector] = (counts[r.sector] || 0) + 1);
+  for (const r of list) {
+    if (S.sort === "sector" && r.sector !== lastSec) { html += `<tr class="grp"><td colspan="6">${esc(names[r.sector] || r.sector)}<i>${counts[r.sector]}</i></td></tr>`; lastSec = r.sector; }
+    html += rowHTML(r);
+  }
+  $("#rows").innerHTML = html || `<tr><td colspan="6" class="none">${t.none}</td></tr>`;
+  $("#rows").querySelectorAll("tr.row").forEach(tr_ => tr_.onclick = e => { if (!e.target.closest("a")) location.href = genURL(tr_.dataset.t); });
+  document.querySelectorAll("th button").forEach(b => b.classList.toggle("on", b.dataset.s === S.sort));
+  $("#sort").value = S.sort;
+  const p = new URLSearchParams();
+  if (S.ui === "en") p.set("ui", "en");
+  if (S.sort !== "sector") p.set("sort", S.sort);
+  if (S.sec) p.set("sector", S.sec);
+  if (S.q) p.set("q", S.q);
+  history.replaceState(null, "", "?" + p.toString());
+}
+function drawSecs() {
+  const t = tr(), counts = {};
+  rows.forEach(r => counts[r.sector] = (counts[r.sector] || 0) + 1);
+  const secs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  $("#secs").innerHTML = `<button class="chip${S.sec ? "" : " on"}" data-s="">${t.all}<i>${rows.length}</i></button>` +
+    secs.map(s => `<button class="chip${S.sec === s ? " on" : ""}" data-s="${s}">${esc(SECTORS[S.ui][s] || s)}<i>${counts[s]}</i></button>`).join("");
+  $("#secs").querySelectorAll("button").forEach(b => b.onclick = () => { S.sec = b.dataset.s; drawSecs(); draw(); });
+}
+function applyUI() {
+  const t = tr();
+  document.documentElement.lang = S.ui === "zh" ? "zh-CN" : "en";
+  document.title = t.title + " · earnings-card";
+  document.querySelectorAll("[data-i]").forEach(el => { const v = t[el.dataset.i]; if (typeof v === "string") (el.dataset.i === "foot" ? el.innerHTML = v : el.textContent = v); });
+  document.querySelectorAll("[data-ph]").forEach(el => el.placeholder = t[el.dataset.ph]);
+  document.querySelectorAll("#uilang button").forEach(b => b.classList.toggle("on", b.dataset.v === S.ui));
+  $("#navGen").href = "../" + (S.ui === "en" ? "?ui=en" : "");
+  $("#lede").textContent = t.lede(rows.length || 103);
+  drawSecs(); draw();
+}
+document.querySelectorAll("#uilang button").forEach(b => b.onclick = () => { S.ui = b.dataset.v; localStorage.ecui = S.ui; applyUI(); });
+document.querySelectorAll("th button").forEach(b => b.onclick = () => { S.sort = b.dataset.s; draw(); });
+$("#sort").onchange = e => { S.sort = e.target.value; draw(); };
+$("#q").value = S.q;
+$("#q").oninput = e => { S.q = e.target.value; draw(); };
+$("#q").onkeydown = e => {
+  if (e.key !== "Enter") return;
+  const hit = $("#rows tr.row");
+  if (hit) location.href = genURL(hit.dataset.t);
+};
+applyUI();
+Promise.all([fetch("../data/coverage.json").then(r => r.ok ? r.json() : Promise.reject(r.status)),
+             fetch("../data/tickers.json").then(r => r.ok ? r.json() : []).catch(() => [])])
+  .then(([c, list]) => { rows = c; if (!rows.length && list.length) rows = list.map(([t, name]) => ({t, name, sector: "other", q: [], a: []})); applyUI(); })
+  .catch(() => fetch("../data/tickers.json").then(r => r.json()).then(list => {
+    rows = list.map(([t, name]) => ({t, name, sector: "other", q: [], a: [], partial: []})); applyUI();
+  }));
+</script>
+</body>
+</html>

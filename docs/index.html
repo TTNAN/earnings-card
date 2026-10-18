@@ -19,6 +19,7 @@
 <header class="top">
   <a class="brand" href="./"><b>earnings-card</b><span data-i="brand"></span></a>
   <nav>
+    <a href="tickers/" id="navTickers" data-i="tickerList"></a>
     <a href="gallery/" data-i="gallery"></a>
     <a href="https://github.com/TTNAN/earnings-card" target="_blank" rel="noopener">GitHub</a>
     <div class="seg small" id="uilang"><button data-v="zh">中文</button><button data-v="en">EN</button></div>
@@ -30,14 +31,20 @@
     <h1 data-i="title"></h1>
     <p class="lede" data-i="lede"></p>
 
-    <label class="field">
-      <span data-i="ticker"></span>
-      <div class="ac">
-        <input id="ticker" autocomplete="off" spellcheck="false" maxlength="12" value="NVDA">
-        <ul id="sugg" role="listbox" hidden></ul>
+    <div class="field">
+      <label for="ticker" class="lab" data-i="ticker"></label>
+      <div class="tkrow">
+        <div class="ac">
+          <input id="ticker" autocomplete="off" spellcheck="false" maxlength="12" value="NVDA" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
+          <ul id="sugg" role="listbox" hidden></ul>
+        </div>
+        <button class="primary go" id="go" data-i="generate"></button>
       </div>
+      <p id="tkerr" class="tkerr" role="alert" hidden></p>
+      <p id="tknote" class="tknote" hidden></p>
+      <div id="recent" class="recent" hidden></div>
       <small id="coverage" class="hint"></small>
-    </label>
+    </div>
 
     <div class="field"><span data-i="period"></span>
       <div class="seg" id="period"><button data-v="quarter" data-i="quarter"></button><button data-v="annual" data-i="annual"></button></div>
@@ -56,51 +63,79 @@
       <div class="swatches" id="styles"></div>
     </div>
 
-    <details class="field" id="custom">
-      <summary data-i="customColors"></summary>
-      <div class="colors">
-        <label><input type="checkbox" data-c="bg"><span data-i="cBg"></span><input type="color" id="c-bg"></label>
-        <label><input type="checkbox" data-c="ink"><span data-i="cInk"></span><input type="color" id="c-ink"></label>
-        <label><input type="checkbox" data-c="hi"><span data-i="cHi"></span><input type="color" id="c-hi"></label>
-      </div>
-    </details>
-
-    <div class="field"><span data-i="font"></span>
-      <div class="seg" id="font"><button data-v="auto" data-i="fAuto"></button><button data-v="sans" data-i="fSans"></button><button data-v="serif" data-i="fSerif"></button><button data-v="mono" data-i="fMono"></button></div>
-    </div>
-
     <div class="field"><span data-i="cardLang"></span>
       <div class="seg" id="lang"><button data-v="zh">中文</button><button data-v="en">English</button></div>
     </div>
 
-    <label class="field"><span data-i="headline"></span>
+    <div class="field"><label for="headline" class="lab" data-i="headline"></label>
       <input id="headline" maxlength="60" data-ph="headlinePh">
+      <div class="ideas" id="ideas" hidden></div>
       <small class="hint" data-i="headlineHint"></small>
-    </label>
-
-    <div class="field"><span data-i="watermark"></span>
-      <div class="wm">
-        <input id="handle" maxlength="40" data-ph="handlePh">
-        <label class="avatar" id="avatarBtn" title=""><input type="file" id="avatar" accept="image/*" hidden><img id="avatarImg" alt="" hidden><span data-i="avatar"></span></label>
-        <button class="link" id="avatarClear" hidden data-i="remove"></button>
-      </div>
     </div>
 
     <div class="field"><span data-i="cards"></span>
       <div class="checks" id="cards"></div>
     </div>
+
+    <details class="more" id="more">
+      <summary data-i="more"></summary>
+
+      <div class="field"><span data-i="extraCards"></span>
+        <div class="checks" id="cards2"></div>
+      </div>
+
+      <div class="field"><span data-i="font"></span>
+        <div class="seg" id="font"><button data-v="auto" data-i="fAuto"></button><button data-v="sans" data-i="fSans"></button><button data-v="serif" data-i="fSerif"></button><button data-v="mono" data-i="fMono"></button></div>
+      </div>
+
+      <div class="field"><span data-i="watermark"></span>
+        <div class="wm">
+          <input id="handle" maxlength="40" data-ph="handlePh">
+          <label class="avatar" id="avatarBtn" title=""><input type="file" id="avatar" accept="image/*" hidden><img id="avatarImg" alt="" hidden><span data-i="avatar"></span></label>
+          <button class="link" id="avatarClear" hidden data-i="remove"></button>
+        </div>
+      </div>
+
+      <div class="field" id="custom"><span data-i="customColors"></span>
+        <div class="colors">
+          <label><input type="checkbox" data-c="bg"><span data-i="cBg"></span><input type="color" id="c-bg"></label>
+          <label><input type="checkbox" data-c="ink"><span data-i="cInk"></span><input type="color" id="c-ink"></label>
+          <label><input type="checkbox" data-c="hi"><span data-i="cHi"></span><input type="color" id="c-hi"></label>
+          <label><input type="checkbox" data-c="a2"><span data-i="cA2"></span><input type="color" id="c-a2"></label>
+          <label class="toggle"><input type="checkbox" id="updown"><span data-i="cUpdown"></span></label>
+        </div>
+        <small class="hint warn" id="cwarn" hidden></small>
+      </div>
+
+      <div class="field"><span data-i="presets"></span>
+        <div class="presets">
+          <select id="presetSel"></select>
+          <button class="ghost" id="presetSave" data-i="presetSave"></button>
+          <button class="link" id="presetDel" data-i="remove" hidden></button>
+        </div>
+      </div>
+    </details>
   </aside>
 
-  <main class="preview">
+  <main class="preview" id="preview">
     <div class="bar">
       <div id="meta" class="meta"></div>
-      <button class="primary" id="zip" disabled data-i="downloadAll"></button>
+      <div class="acts">
+        <button class="ghost" id="copyCap" disabled data-i="copyCaption"></button>
+        <button class="primary" id="zip" disabled data-i="downloadAll"></button>
+      </div>
     </div>
-    <div id="status" class="status"><div class="spinner"></div><p id="statusText"></p></div>
+    <details class="capbox" id="capbox" hidden><summary data-i="captionShow"></summary><textarea id="caption" rows="8" spellcheck="false"></textarea></details>
+    <div id="status" class="status" role="status" aria-live="polite"><div class="spinner"></div>
+      <div class="stx"><p id="statusText"></p><div class="prog" id="prog" hidden><i id="progBar"></i></div></div>
+      <button class="ghost" id="retry" hidden data-i="retry"></button>
+    </div>
     <div id="grid" class="grid"></div>
     <footer class="foot" data-i="foot"></footer>
   </main>
 </div>
+<button class="jump" id="jump" hidden data-i="jump"></button>
+<div class="toast" id="toast" hidden></div>
 
 <script src="app.js"></script>
 </body>

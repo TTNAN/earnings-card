@@ -5,8 +5,11 @@
  *
  * page -> worker: {type: "tables", tables}            new width tables (sent again when fonts load)
  *                 {type: "render", id, data, opts}     JSON strings in, as render.web_render takes them
+ *                                                      (opts.only = card index: one card + {names} of the set)
+ *                 {type: "extras", id, data, opts}     caption + headline ideas (render.web_extras)
  * worker -> page: {type: "ready", families}           engine up; families = font stacks to measure
- *                 {type: "result", id, out}            out = JSON string [{name, svg, w, h}]
+ *                 {type: "result", id, out}            out = JSON string [{name, svg, w, h}] (or {names, cards})
+ *                 {type: "extras", id, out}            out = JSON string {caption, headlines}, null on error
  *                 {type: "error", id, message, stack}
  *                 {type: "bootError", stage, message, stack}
  *                 {type: "stage", stage}               boot progress, for the error message */
@@ -69,6 +72,7 @@ async function boot() {
   pyo.runPython("import render, measure_tables");
   py = {
     webRender: pyo.pyimport("render").web_render,
+    webExtras: pyo.pyimport("render").web_extras,
     setTables: pyo.pyimport("measure_tables").set_tables,
     families: pyo.runPython("import json; json.dumps(measure_tables.families())"),
   };
@@ -77,6 +81,9 @@ async function boot() {
 function handle(m) {
   if (m.type === "tables") {
     py.setTables(JSON.stringify(m.tables));
+  } else if (m.type === "extras") {   // caption + headline ideas for one period
+    try { self.postMessage({type: "extras", id: m.id, out: py.webExtras(m.data, m.opts)}); }
+    catch (e) { self.postMessage({type: "extras", id: m.id, out: null, message: String(e && e.message || e)}); }
   } else if (m.type === "render") {
     try {
       self.postMessage({type: "result", id: m.id, out: py.webRender(m.data, m.opts)});
@@ -91,6 +98,7 @@ self.onmessage = e => { if (py) handle(e.data); else queue.push(e.data); };
 boot().then(() => {
   self.postMessage({type: "ready", families: JSON.parse(py.families)});
   // Before ready the page only ever sends tables + one render; keep just the newest of each.
+  // (extras are only sent after ready.)
   const tables = queue.filter(m => m.type === "tables").pop(), job = queue.filter(m => m.type === "render").pop();
   queue.length = 0;
   if (tables) handle(tables);
