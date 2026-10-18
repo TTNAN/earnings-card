@@ -15,7 +15,7 @@ its "trend"; "series" holds the trend points they share (enough for each period'
 Segments of a period already in the old file (same accession) are reused, so a nightly run only
 downloads filings it has not seen.
 Also writes docs/data/tickers.json = [[ticker, name], ...] for the search box, and docs/data/coverage.json
-(Chinese name and sector from tools/ticker_meta.json, periods on file, missing fields) for docs/tickers/. A ticker that fails keeps its
+(Chinese name and sector from tools/ticker_meta.json, periods on file, missing fields, newest filing date) for docs/tickers/. A ticker that fails keeps its
 previous file; one failure never stops the run. Files are rewritten only when their content changes.
 Set SEC_USER_AGENT to "name email" (SEC requires a contact); requests stay under SEC's 10/s limit.
 """
@@ -147,6 +147,10 @@ def coverage_row(d, meta):
             row["partial"].append(period + ":" + ",".join(miss))
     if 0 < len(row["q"]) < 4:
         row["partial"].append("few_quarter")
+    # the newest filing date on file (10-Q or 10-K): the web page's "just reported" chips sort by it
+    filed = [p.get("filed") for period in ("quarter", "annual")
+             for p in ((d.get(period) or {}).get("periods") or [])[-1:] if p.get("filed")]
+    row["filed"] = max(filed) if filed else ""
     return row
 
 
@@ -159,7 +163,7 @@ def index(out_dir):
     except (OSError, ValueError):
         meta = {}
     for f in sorted(os.listdir(out_dir)):
-        if f.endswith(".json") and f not in ("tickers.json", "coverage.json") and f[:-5].isupper():
+        if f.endswith(".json") and f not in ("tickers.json", "coverage.json", "calendar.json") and f[:-5].isupper():
             d = json.load(open(os.path.join(out_dir, f), encoding="utf-8"))
             if d.get("quarter") or d.get("annual"):
                 name = d.get("name", "")

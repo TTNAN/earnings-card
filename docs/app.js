@@ -24,6 +24,9 @@ const STYLES = [
   {id: "glass", zh: "毛玻璃渐变", en: "Glass", bg: "#D8CCF0", ink: "#1F2240", hi: "#6B4EFF",
    grad: "linear-gradient(135deg,#B8C8F8,#E3C8EE,#F8DCCB)"},
 ];
+// The main picker shows 8 styles (3 marked recommended); the other 4 sit under "more styles".
+const MAIN_STYLES = ["light", "dark", "pop", "salmon", "keynote", "terminal", "vintage", "glass"];
+const REC_STYLES = ["light", "dark", "pop"];
 // Second accent (render.py THEMES[...]["a2"]) per style, for the colour picker's starting value.
 const A2 = {light: "#8C6A3F", dark: "#D9A65E", mono: "#E10600", terminal: "#33C7FF", salmon: "#990F3D", pop: "#D46A00",
   bloomberg: "#4AA3FF", keynote: "#2997FF", neon: "#FF3DCB", vintage: "#9E2B1F", morandi: "#8E7360", glass: "#6B4EFF"};
@@ -44,6 +47,15 @@ const SECTORS = {
 
 const T = {
   zh: {
+    step1: "选股", step2: "选样子", step3: "微调", moreStyles: "更多风格", rec: "推荐", details: "详情",
+    justFiled: "刚出财报", calendar: "近期财报日历", calCount: n => `${n} 家`, calNone: "未来两周没有覆盖的公司发财报",
+    bmo: "盘前", amc: "盘后", wd: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"], today: "今天", tomorrow: "明天",
+    filedOn: d => `${d} 披露`, reportsOn: (d, w) => `${d} ${w}发布财报`,
+    sum2: (st, r, lg) => `${st} · ${r} · ${lg === "zh" ? "中文" : "English"}`,
+    sum3: (n, h, wm) => [`${n} 张卡片`, h ? "有标题" : "", wm ? "有水印" : ""].filter(Boolean).join(" · "),
+    fBoot: ["正在准备画笔…", "正在准备画笔，第一次打开要多等一会儿…", "还在准备画笔，网络有点慢，请稍候…"],
+    fFonts: "正在铺纸、摆好字体…", fLoading: t => `正在翻 ${t} 的财报…`, fDrawing: (i, n) => `正在排版第 ${i} 张（共 ${n} 张）…`,
+    fBootFail: "画笔没能准备好，可能是网络不稳。点「重试」或刷新页面再试一次。", fRenderFail: "这张卡片没画出来，点「重试」再来一次。",
     brand: "财报卡生成器", gallery: "画廊", tickerList: "支持列表", title: "输入代码，生成财报卡",
     lede: "选季报或年报（最近 8 个季度、5 个财年都能选）、卡片模板、风格、比例和水印，卡片在浏览器里即时生成。数据来自 SEC EDGAR 官方财报。",
     ticker: "股票代码", generate: "生成", period: "报告期", quarter: "季报", annual: "年报", ratio: "图片比例", style: "风格",
@@ -85,6 +97,15 @@ const T = {
     foot: '数据来自 SEC EDGAR（GAAP 口径），不构成投资建议。卡片由开源项目 <a href="https://github.com/TTNAN/earnings-card">earnings-card</a> 生成，也可以在 Claude Code / Codex 里装上 skill：<code>npx skills add TTNAN/earnings-card</code>',
   },
   en: {
+    step1: "Pick a stock", step2: "Pick a look", step3: "Fine-tune", moreStyles: "More styles", rec: "Top", details: "Details",
+    justFiled: "Just reported", calendar: "Earnings calendar", calCount: n => `${n} companies`, calNone: "No covered company reports in the next two weeks",
+    bmo: "pre-market", amc: "after close", wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], today: "Today", tomorrow: "Tomorrow",
+    filedOn: d => `filed ${d}`, reportsOn: (d, w) => `reports ${w} ${d}`,
+    sum2: (st, r, lg) => `${st} · ${r} · ${lg === "zh" ? "Chinese" : "English"}`,
+    sum3: (n, h, wm) => [`${n} cards`, h ? "headline" : "", wm ? "watermark" : ""].filter(Boolean).join(" · "),
+    fBoot: ["Getting the brushes ready…", "Getting the brushes ready; the first visit takes a little longer…", "Still getting ready, the network is slow; hang on…"],
+    fFonts: "Laying out the paper and fonts…", fLoading: t => `Reading ${t}'s filings…`, fDrawing: (i, n) => `Laying out card ${i} of ${n}…`,
+    fBootFail: "Couldn't get ready, probably a network hiccup. Hit Retry or reload the page.", fRenderFail: "This card didn't come out. Hit Retry to try again.",
     brand: "Earnings card generator", gallery: "Gallery", tickerList: "Tickers", title: "Type a ticker, get the cards",
     lede: "Pick quarterly or annual (any of the last 8 quarters or 5 fiscal years), card templates, a style, an aspect ratio and your watermark. Cards render instantly in your browser from official SEC filings.",
     ticker: "Ticker", generate: "Generate", period: "Report", quarter: "Quarterly", annual: "Annual", ratio: "Aspect ratio", style: "Style",
@@ -208,6 +229,8 @@ function applyUI() {
   drawPresets();
   drawRecent();
   drawTickerNote();
+  drawQuick();
+  drawSummaries();
   if ($("#tkerr").dataset.t) showTkErr($("#tkerr").dataset.t);
   setSeg("#uilang", S.ui);
   if (current) $("#meta").innerHTML = metaHTML();
@@ -224,15 +247,22 @@ function bindSeg(sel, key, after) {
   });
   setSeg(sel, S[key]);
 }
+function swatchHTML(s) {
+  const on = s.id === S.style, rec = REC_STYLES.includes(s.id);
+  return `<button class="sw${on ? " on" : ""}" data-v="${s.id}" aria-pressed="${on}" title="${esc(s[S.ui])}">
+    <img src="styles/thumbs/${s.id}.webp" alt="" width="84" height="105" loading="lazy" decoding="async" style="background:${s.grad || s.bg}">
+    ${rec ? `<span class="rec">${esc(tr().rec)}</span>` : ""}<em>${esc(s[S.ui])}</em></button>`;
+}
 function drawSwatches() {
-  $("#styles").innerHTML = STYLES.map(s => `<button class="sw${s.id === S.style ? " on" : ""}" data-v="${s.id}" aria-pressed="${s.id === S.style}">
-    <i style="background:${s.grad || s.bg}"><b style="background:${s.ink};height:22px"></b><b style="background:${s.hi};height:14px"></b><b style="background:${s.ink};height:9px;opacity:.35"></b></i>
-    <em>${s[S.ui]}</em></button>`).join("");
+  $("#styles").innerHTML = STYLES.filter(s => MAIN_STYLES.includes(s.id)).map(swatchHTML).join("");
+  $("#styles2").innerHTML = STYLES.filter(s => !MAIN_STYLES.includes(s.id)).map(swatchHTML).join("");
+  if (!MAIN_STYLES.includes(S.style)) $("#moreStyles").open = true;
   document.querySelectorAll(".sw").forEach(b => b.onclick = () => {
     S.style = b.dataset.v; drawSwatches(); syncColorInputs(); schedule();
   });
   const on = $(".sw.on");
-  if (on && $("#styles").scrollWidth > $("#styles").clientWidth) on.scrollIntoView({block: "nearest", inline: "nearest"});
+  if (on && on.parentElement.scrollWidth > on.parentElement.clientWidth) on.scrollIntoView({block: "nearest", inline: "nearest"});
+  drawSummaries();
 }
 function syncColorInputs() {
   const st = STYLES.find(s => s.id === S.style), base = {bg: st.bg, ink: st.ink, hi: st.hi, a2: A2[st.id]};
@@ -281,16 +311,18 @@ function drawChecks() {
 }
 
 // ---------- status ----------
-function status(msg, err, prog) {
+function status(msg, err, prog, detail) {
   const el = $("#status");
   el.hidden = !msg; el.classList.toggle("err", !!err);
   $("#statusText").textContent = msg || "";
+  $("#statusDetail").hidden = !err || !detail;   // technical details only behind 详情, and only for errors
+  $("#statusDetailText").textContent = detail || "";
   $("#retry").hidden = !err || !retryFn;
   $("#prog").hidden = prog == null || !!err;
   if (prog != null) $("#progBar").style.width = Math.round(prog * 100) + "%";
 }
 let retryFn = null;
-function fail(msg, retry) { retryFn = retry || null; status(msg, true); }
+function fail(msg, retry, detail) { retryFn = retry || null; status(msg, true, null, detail); }
 
 // ---------- ticker search ----------
 function lev(a, b) {
@@ -372,7 +404,7 @@ function pickTicker(raw, force) {
   inp.value = tk;
   if (tk !== S.ticker || !current || force) {
     if (tk !== S.ticker) { S.headline = ""; $("#headline").value = ""; S.end = null; }   // a headline and a period are about one stock
-    S.ticker = tk; saveURL(); drawTickerNote(); drawRecent(); loadTicker();
+    S.ticker = tk; saveURL(); drawTickerNote(); drawRecent(); drawQuick(); loadTicker();
   } else schedule(0);
 }
 function setupSearch() {
@@ -421,7 +453,7 @@ async function loadTicker() {
     return;
   }
   drawSlots(expectedNames(), true);
-  if (engine) status(tr().loading(tk), false, null);
+  if (engine) status(tr().fLoading(tk), false, null);
   try {
     if (!dataCache[tk]) {
       const [rec, lab, gzh, gen] = await Promise.all([
@@ -550,7 +582,7 @@ function fillSlot(i, card) {
 
 // ---------- rendering ----------
 let timer = null;
-function schedule(ms = 140) { clearTimeout(timer); timer = setTimeout(render, ms); saveURL(); }
+function schedule(ms = 140) { clearTimeout(timer); timer = setTimeout(render, ms); saveURL(); drawSummaries(); }
 function options() {
   const cards = CARD_ORDER.filter(c => !S.off.has(c));
   const o = {lang: S.lang, style: S.style, font: S.font, ratio: S.ratio, cards, headline: S.headline.trim(),
@@ -580,7 +612,7 @@ function render(quiet) {
   step();
 }
 function step() {
-  if (!job.quiet) status(tr().drawing(job.i + 1, job.names.length), false, job.i / job.names.length);
+  if (!job.quiet) status(tr().fDrawing(job.i + 1, job.names.length), false, job.i / job.names.length);
   engine.postMessage({type: "render", id: job.id, data: job.data, opts: JSON.stringify(Object.assign({}, job.o, {only: job.i}))});
 }
 async function onWorker(m) {
@@ -590,7 +622,7 @@ async function onWorker(m) {
   if (rerun) { rerun = false; job = null; render(); return; }
   if (m.type === "error") {
     console.error(m.message, m.stack); job = null;
-    fail(tr().renderFail + String(m.message).slice(0, 300), () => render());
+    fail(tr().fRenderFail, () => render(), tr().renderFail + String(m.message).slice(0, 600));
     return;
   }
   const r = JSON.parse(m.out);
@@ -892,11 +924,69 @@ function setupPresets() {
 }
 
 // ---------- "more settings" + mobile jump ----------
-function setupMore() {
-  const d = $("#more"), saved = localStorage.ecMore;
-  d.open = saved ? saved === "1" : window.innerWidth > 900;
-  d.addEventListener("toggle", () => { localStorage.ecMore = d.open ? "1" : "0"; });
+// Three steps: only step 1 starts open; a closed step shows a one-line summary of what it holds.
+function setupSteps() {
+  document.querySelectorAll(".step").forEach(d => d.addEventListener("toggle", drawSummaries));
 }
+function drawSummaries() {
+  const t = tr(), st = STYLES.find(x => x.id === S.style), c = current && current.data;
+  const s1 = $("#sum1"), s2 = $("#sum2"), s3 = $("#sum3");
+  if (!s1) return;
+  s1.textContent = S.ticker + " · " + (c && c.fiscal_label ? c.fiscal_label : (S.period === "annual" ? t.annual : t.quarter));
+  s2.textContent = t.sum2(st ? st[S.ui] : S.style, S.ratio, S.lang);
+  s3.textContent = t.sum3(expectedNames().length, !!S.headline, !!S.handle);
+}
+
+// ---------- quick entries: just reported + earnings calendar ----------
+let calendar = null;
+// "YYYY-MM-DD" today in New York: report dates are US dates
+function usToday() {
+  try { return new Intl.DateTimeFormat("en-CA", {timeZone: "America/New_York"}).format(new Date()); }
+  catch (e) { return new Date().toISOString().slice(0, 10); }
+}
+const md = d => S.ui === "zh" ? `${+d.slice(5, 7)}/${+d.slice(8, 10)}` : d.slice(5).replace("-", "/");
+const wday = d => tr().wd[new Date(d + "T12:00:00Z").getUTCDay()];
+function quickChip(tk, title, extra) {
+  const zh = S.ui === "zh" && cov[tk] && cov[tk].zh && cov[tk].zh !== tk ? cov[tk].zh : "";
+  return `<button class="chip qc${tk === S.ticker ? " on" : ""}" data-t="${esc(tk)}" title="${esc([zh, title].filter(Boolean).join(" · "))}">${esc(tk)}${extra || ""}</button>`;
+}
+// The ~8 tickers with the newest filings on file (coverage.json "filed").
+function justFiled(rows, n = 8) {
+  return rows.filter(r => r.filed).sort((a, b) => b.filed.localeCompare(a.filed) || a.t.localeCompare(b.t)).slice(0, n);
+}
+// Upcoming rows (today onward, within `days`), grouped by date: [[date, [rows]]].
+function upcoming(cal, today, days = 14) {
+  const rows = (cal && cal.rows) || [], end = new Date(Date.parse(today + "T00:00:00Z") + days * 864e5).toISOString().slice(0, 10);
+  const g = new Map();
+  for (const r of rows) {
+    if (!r || !r.t || !r.date || r.date < today || r.date > end) continue;
+    if (tickers.length && !known(r.t)) continue;
+    if (!g.has(r.date)) g.set(r.date, []);
+    g.get(r.date).push(r);
+  }
+  return [...g.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+function drawQuick() {
+  const t = tr(), rows = Object.values(cov);
+  const filed = justFiled(rows);
+  $("#qFiled").hidden = !filed.length;
+  $("#filedChips").innerHTML = filed.map(r => quickChip(r.t, t.filedOn(r.filed))).join("");
+  const today = usToday(), days = upcoming(calendar, today);
+  const n = days.reduce((k, [, r]) => k + r.length, 0);
+  $("#qCal").hidden = !n;
+  if (n) {
+    const tmr = new Date(Date.parse(today + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+    const label = d => d === today ? t.today : d === tmr ? t.tomorrow + " " + wday(d) : `${md(d)} ${wday(d)}`;
+    const [d0, r0] = days[0];
+    $("#calNext").innerHTML = `${esc(t.calCount(n))} · <b>${esc(label(d0))}</b> ${r0.slice(0, 4).map(r => esc(r.t)).join(" ")}${r0.length > 4 ? " …" : ""}`;
+    $("#calList").innerHTML = days.map(([d, rs]) => `<div class="calday"><span class="cald">${esc(label(d))}</span><div class="qchips">${
+      rs.map(r => quickChip(r.t, t.reportsOn(md(d), wday(d)) + (r.time ? " · " + t[r.time] : ""),
+        r.time ? `<i class="tm ${r.time}" aria-label="${esc(t[r.time])}"></i>` : "")).join("")}</div></div>`).join("")
+      + `<div class="callegend"><span><i class="tm bmo"></i> ${esc(t.bmo)}</span><span><i class="tm amc"></i> ${esc(t.amc)}</span></div>`;
+  }
+  document.querySelectorAll("#quick .qc").forEach(b => b.onclick = () => { S.end = null; pickTicker(b.dataset.t, true); });
+}
+
 let jumpObs = null;
 function watchJump() {
   const btn = $("#jump");
@@ -937,10 +1027,10 @@ const STAGES = ["worker", "probe", "load npmmirror", "load cdn", "load local", "
 let bootT0 = 0, bootStage = "worker", bootTick = null;
 function showBoot() {
   if ($("#status").classList.contains("err") && !$("#status").hidden) return;   // e.g. an unsupported ticker: keep saying so
-  const t = tr(), i = Math.max(0, STAGES.indexOf(bootStage)), n = STAGES.length;
-  const sec = Math.round((Date.now() - bootT0) / 1000);
-  if (bootStage === "fonts") { status(t.stages.fonts + "…", false, 5 / 6); return; }
-  status(t.bootLine(t.stages[bootStage] || bootStage, Math.min(i + 1, n), n, sec), false, (i + 0.5) / (n + 1));
+  // Friendly words only: which CDN or stage the engine is on stays out of sight (it is in the error details).
+  const t = tr(), sec = (Date.now() - bootT0) / 1000;
+  if (bootStage === "fonts") { status(t.fFonts, false, 0.92); return; }
+  status(t.fBoot[sec < 8 ? 0 : sec < 25 ? 1 : 2], false, 0.9 * (1 - Math.exp(-sec / 12)));
 }
 async function bootEngine() {
   bootT0 = Date.now(); bootStage = "worker"; showBoot();
@@ -950,8 +1040,8 @@ async function bootEngine() {
   } catch (e) {
     console.error(e);
     clearInterval(bootTick);
-    const st = String(e && e.stack || "").split("\n").slice(0, 4).join(" | ");
-    fail(tr().bootFail + " [" + (e && e.stage || "?") + "] (" + (e && e.message) + ") " + st + " · " + navigator.userAgent, bootEngine);
+    const st = String(e && e.stack || "").split("\n").slice(0, 4).join(" | "), t = tr();
+    fail(t.fBootFail, bootEngine, "[" + (e && e.stage || "?") + (t.stages[e && e.stage] ? " · " + t.stages[e.stage] : "") + "] (" + (e && e.message) + ") " + st + " · " + navigator.userAgent);
     return;
   }
   clearInterval(bootTick);
@@ -959,7 +1049,7 @@ async function bootEngine() {
   await (document.fonts ? document.fonts.ready : Promise.resolve());
   sendTables();
   if (dataCache[S.ticker]) schedule(0);
-  else if (!$("#status").classList.contains("err")) status(tr().loading(S.ticker), false, null);
+  else if (!$("#status").classList.contains("err")) status(tr().fLoading(S.ticker), false, null);
 }
 async function boot() {
   applyUI();
@@ -988,7 +1078,7 @@ async function boot() {
   setupWatermark();
   setupSearch();
   setupPresets();
-  setupMore();
+  setupSteps();
   $("#zip").onclick = downloadAll;
   $("#copyCap").onclick = copyCaption;
   $("#retry").onclick = () => { const f = retryFn; retryFn = null; status(""); f && f(); };
@@ -999,7 +1089,9 @@ async function boot() {
   const listP = Promise.all([
     getJSON("data/tickers.json").then(l => { tickers = l; }).catch(() => {}),
     getJSON("data/coverage.json").then(l => { for (const r of l) cov[r.t] = r; }).catch(() => {}),
-  ]).then(() => { drawCoverage(); drawTickerNote(); drawRecent(); });
+  ]).then(() => { drawCoverage(); drawTickerNote(); drawRecent(); drawQuick(); });
+  // the calendar is optional: a missing or empty file just hides that row
+  Promise.all([listP, getJSON("data/calendar.json").then(c => { calendar = c; }).catch(() => { calendar = null; })]).then(drawQuick);
   getJSON("data/labels-zh.json").then(l => { labelsZh = l; }).catch(() => { labelsZh = {}; });
   const engP = bootEngine();
   await listP;
@@ -1022,7 +1114,7 @@ function startEngine(onStage) {
         w.onmessage = ev => onWorker(ev.data);
         w.onerror = ev => {   // the worker died mid-session: say so instead of spinning forever
           ev.preventDefault(); job = null; rerun = false; engine = null;
-          fail(tr().bootFail + " [worker] (" + ev.message + ") · " + navigator.userAgent, bootEngine);
+          fail(tr().fBootFail, bootEngine, "[worker] (" + ev.message + ") · " + navigator.userAgent);
         };
         ok(w);
       }

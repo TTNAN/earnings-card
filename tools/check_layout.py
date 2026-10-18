@@ -31,9 +31,22 @@ def boxes(svg):
         if not s.strip():
             continue
         x, y, size = float(e.get("x")), float(e.get("y")), float(e.get("font-size"))
-        w = R.measure(s, size, int(e.get("font-weight", 400)), float(e.get("letter-spacing", 0)))
+        w = _measure_as(e.get("font-family"), s, size, int(e.get("font-weight", 400)), float(e.get("letter-spacing", 0)))
         out.append((s, x, y - 0.74 * size, x + w, y + 0.2 * size))
     return vb[2], vb[3], out
+
+
+def _measure_as(family, s, size, weight, ls):
+    """Measure with the font set the text element names (display headlines use another face than the body)."""
+    fs = next((v for v in R.FONT_SETS.values() if v[0] == family), None)
+    if not fs or family == R.FONT:
+        return R.measure(s, size, weight, ls)
+    saved = R.FONT, R.CJK_FONT, R._PIL_OVR
+    R.FONT, R.CJK_FONT, R._PIL_OVR = fs[0], fs[1], (fs[2], fs[3])
+    try:
+        return R.measure(s, size, weight, ls)
+    finally:
+        R.FONT, R.CJK_FONT, R._PIL_OVR = saved
 
 
 def problems(svg, margin=24, slack=2):
@@ -108,9 +121,10 @@ def main():
         return main_data()
     sys.path.insert(0, os.path.join(ROOT, "tests"))
     from helpers import load, opt
-    fixtures = sys.argv[1:] or ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA",
+    args = [a for a in sys.argv[1:] if not a.startswith("--") and a != _arg("--styles")]
+    fixtures = args or ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA",
                                 "NVDA-annual", "AAPL-annual", "JPM", "JPM-annual"]
-    styles = [k for k in R.THEMES if k not in ("paper", "ink")]
+    styles = _arg("--styles", "").split(",") if _arg("--styles") else [k for k in R.THEMES if k not in ("paper", "ink")]
     n = bad = 0
     for fx in fixtures:
         if not os.path.exists(os.path.join(ROOT, "tests", "fixtures", fx + ".json")):

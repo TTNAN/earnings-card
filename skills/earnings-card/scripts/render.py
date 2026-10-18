@@ -50,7 +50,7 @@ PIL_SERIF_SC = {"bold": ["NotoSerifSC-Bold*", "NotoSerifCJK*Bold*", "Songti*"], 
 #   up down: good / bad numbers;  a1 a2 a3: line-chart series;  hi: highlighted bar (latest quarter)
 #   palette: segment colors;  round: corner radius multiplier (0 = square);  stroke: box outline width
 THEMES = {
-    "light": dict(label="Paper · 杂志米白", bg="#F4F1EA", ink="#151515", sub="#6F6A60", faint="#DDD7CB", bar="#CFC8BA",
+    "light": dict(label="Paper · 杂志米白", display="serif", bg="#F4F1EA", ink="#151515", sub="#6F6A60", faint="#DDD7CB", bar="#CFC8BA",
                   up="#1E7A4C", down="#B5403A", card="#FBF9F4", a1="#151515", a2="#8C6A3F", a3="#9C978C",
                   palette=["#151515", "#8C6A3F", "#B9A27E", "#6F6A60", "#CFC8BA", "#E3DDD1", "#A8A296", "#EFEAE0"]),
     "dark": dict(label="Ink · 墨黑", bg="#121212", ink="#F2EFE8", sub="#9A958B", faint="#2E2C29", bar="#3A3733",
@@ -105,6 +105,7 @@ THEMES = {
 }
 THEMES["paper"], THEMES["ink"] = THEMES["light"], THEMES["dark"]   # friendlier aliases
 FONT, CJK_FONT, _STYLE = SANS, SANS_SC, {}
+_PIL_OVR = None   # (pil, pil_cjk) while display text is drawn
 
 
 FONT_SETS = {"sans": (SANS, SANS_SC, PIL_SANS, PIL_SANS_SC), "serif": (SERIF, SERIF_SC, PIL_SERIF, PIL_SERIF_SC),
@@ -126,8 +127,9 @@ def build_style(custom, base_dir=None):
     """Same as a style JSON file, from a dict. A relative avatar path is read from base_dir."""
     custom = dict(custom)
     t = dict(THEMES[custom.pop("base", "light")])
-    if custom.get("font") in FONT_SETS:
+    if custom.get("font") in FONT_SETS:   # an explicit font replaces the style's display font too
         t["font"], t["cjk_font"], t["pil"], t["pil_cjk"] = FONT_SETS[custom.pop("font")]
+        t.pop("display", None)
     elif "font" in custom and custom["font"] in (None, "", "auto"):
         custom.pop("font")
     av = custom.get("avatar")
@@ -323,12 +325,15 @@ _FONTS = {}
 
 
 def _pil_font(cjk, bold, size):
-    key = (cjk, bold, size)
+    if _PIL_OVR:
+        src = _PIL_OVR[1] if cjk else _PIL_OVR[0]
+    else:
+        src = _STYLE.get("pil_cjk", PIL_SANS_SC) if cjk else _STYLE.get("pil", PIL_SANS)
+    key = (cjk, bold, size, src["bold" if bold else "reg"][0])
     if key not in _FONTS:
         f = None
         try:
             from PIL import ImageFont
-            src = _STYLE.get("pil_cjk", PIL_SANS_SC) if cjk else _STYLE.get("pil", PIL_SANS)
             pats = src["bold" if bold else "reg"]
             dirs = [os.path.expanduser("~/.fonts"), os.path.expanduser("~/Library/Fonts"), "/usr/share/fonts",
                     "/Library/Fonts", "/System/Library/Fonts"]
@@ -347,6 +352,22 @@ def _pil_font(cjk, bold, size):
 
 
 _MEASURER, _MCACHE = None, {}
+
+
+class display_font:
+    """with display_font(): headline / title text in the style's display face (THEMES[...]["display"],
+    a FONT_SETS key, e.g. serif headlines on the magazine style); body text keeps the style's font."""
+    def __enter__(self):
+        global FONT, CJK_FONT, _PIL_OVR
+        self.saved = FONT, CJK_FONT, _PIL_OVR
+        fs = FONT_SETS.get(_STYLE.get("display") or "")
+        if fs:
+            FONT, CJK_FONT, _PIL_OVR = fs[0], fs[1], (fs[2], fs[3])
+        return self
+
+    def __exit__(self, *a):
+        global FONT, CJK_FONT, _PIL_OVR
+        FONT, CJK_FONT, _PIL_OVR = self.saved
 
 
 def set_measurer(fn=None):
@@ -533,7 +554,8 @@ def small_header(c, d, l, title, subtitle, P):
         c.add(text(P + tw + 14, 100, clip(company_name(d), room, 20, 500), 20, t["sub"], 500))
         c.add(text(c.w - P, 100, right, 18, t["sub"], 500, "end"))
         c.rect(P, 122, c.w - 2 * P, 2, t["ink"])
-        c.add(text(P, 190, title, fit(title, c.w - 2 * P, 48, 800, -1), t["ink"], 800, ls=-1))
+        with display_font():
+            c.add(text(P, 190, title, fit(title, c.w - 2 * P, 48, 800, -1), t["ink"], 800, ls=-1))
         if subtitle:
             sz = fit(subtitle, c.w - 2 * P, 24, 500, floor=20)
             c.add(text(P, 236, clip(subtitle, c.w - 2 * P, sz, 500), sz, t["sub"], 500))
@@ -544,7 +566,8 @@ def small_header(c, d, l, title, subtitle, P):
     c.add(text(P + tw + 16, 112, clip(company_name(d), room, 22, 500), 22, t["sub"], 500))
     c.add(text(c.w - P, 112, right, 20, t["sub"], 500, "end"))
     c.rect(P, 140, c.w - 2 * P, 2, t["ink"])
-    c.add(text(P, 224, title, 54, t["ink"], 800, ls=-1))
+    with display_font():
+        c.add(text(P, 224, title, fit(title, c.w - 2 * P, 54, 800, -1), t["ink"], 800, ls=-1))
     if subtitle:
         sz = fit(subtitle, c.w - 2 * P, 26, 500, floor=21)
         c.add(text(P, 278, clip(subtitle, c.w - 2 * P, sz, 500), sz, t["sub"], 500))
@@ -650,9 +673,10 @@ def card_cover(d, l, lang, t, headline, size=None):
     c.rect(P, y, W - 2 * P, 2, t["ink"])
     y += 70 + e * 5 // 100
     if headline:
-        lines = wrap(headline, W - 2 * P, 44, 700)
-        for i, line in enumerate(lines):
-            c.add(text(P, y + i * 58, line, 44, t["ink"], 700))
+        with display_font():
+            lines = wrap(headline, W - 2 * P, 44, 700)
+            for i, line in enumerate(lines):
+                c.add(text(P, y + i * 58, line, 44, t["ink"], 700))
         y += 58 * len(lines) + 20
     else:
         y -= 10
@@ -689,9 +713,10 @@ def _cover_square(d, l, lang, t, headline, W, H):
     c.rect(P, 196, W - 2 * P, 2, t["ink"])
     y = 258
     if headline:
-        lines = wrap(headline, W - 2 * P, 40, 700)
-        for i, line in enumerate(lines):
-            c.add(text(P, y + i * 52, line, 40, t["ink"], 700))
+        with display_font():
+            lines = wrap(headline, W - 2 * P, 40, 700)
+            for i, line in enumerate(lines):
+                c.add(text(P, y + i * 52, line, 40, t["ink"], 700))
         y += 52 * len(lines) + 14
     else:
         y -= 10
@@ -974,9 +999,10 @@ def card_wide(d, l, lang, t, headline):
     left_w = 700
     y = 252
     if headline:
-        lines = wrap(headline, left_w, 44, 700)
-        for i, line in enumerate(lines):
-            c.add(text(P, y + i * 58, line, 44, t["ink"], 700))
+        with display_font():
+            lines = wrap(headline, left_w, 44, 700)
+            for i, line in enumerate(lines):
+                c.add(text(P, y + i * 58, line, 44, t["ink"], 700))
         y += 58 * len(lines) + 24
     c.add(text(P, y, l["rev"], 22, t["sub"], 500))
     rv = money(d["revenue"], lang)
@@ -1361,7 +1387,8 @@ def card_poster(d, l, lang, t, headline, size=None):
     ys = f'{pct(yoy)} {l["yoy"]}' if yoy is not None else ""
     ysz = 56 if not square else 48
     hs = 42 if not square else 36
-    lines = wrap(headline, W - 2 * P, hs, 700) if headline else []
+    with display_font():
+        lines = wrap(headline, W - 2 * P, hs, 700) if headline else []
     eps = "—" if d.get("eps") is None else f'${d["eps"]:.2f}'
     more = x["poster_more"].format(gm=l["gm"], gmv=pct(d.get("gross_margin"), False), ni=l["ni"],
                                    niv=money(d.get("net_income"), lang), eps=x["eps_short"], epsv=eps)
@@ -1370,7 +1397,7 @@ def card_poster(d, l, lang, t, headline, size=None):
     items, y = [], 0
     for line in lines:
         y += hs
-        items.append(("t", line, y, hs, t["ink"], 700))
+        items.append(("h", line, y, hs, t["ink"], 700))
         y += round(hs * 0.32)
     if lines:
         y += 44
@@ -1390,6 +1417,9 @@ def card_poster(d, l, lang, t, headline, size=None):
     for kind, s_, yy, sz, col, wt in items:
         if kind == "bar":
             c.rect(W / 2 - 40, off + yy, 80, 8, col, 2)
+        elif kind == "h":
+            with display_font():
+                c.add(text(W / 2, off + yy, s_, sz, col, wt, "middle"))
         else:
             c.add(text(W / 2, off + yy, s_, sz, col, wt, "middle", ls=-6 if sz == S else 0))
     footer(c, d, l, lang, P, "__PAGE__")

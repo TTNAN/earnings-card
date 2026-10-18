@@ -5,9 +5,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>earnings-card · 财报卡生成器</title>
 <meta name="description" content="输入美股代码，选季报或年报（可选历史财年/季度）、风格、比例和水印，在浏览器里即时生成财报卡。数据来自 SEC EDGAR。Type a US ticker and get shareable earnings cards instantly.">
+<link rel="canonical" href="https://earningscard.tech/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="earnings-card">
+<meta property="og:url" content="https://earningscard.tech/">
 <meta property="og:title" content="earnings-card · 财报卡生成器">
-<meta property="og:description" content="Type a ticker, get a set of earnings cards from SEC filings. Free, open source, runs in your browser.">
-<meta property="og:image" content="https://ttnan.github.io/earnings-card/gallery/cards/en/NVDA-7-wide.webp">
+<meta property="og:description" content="输入美股代码，一键生成可分享的财报卡：季报、年报、12 种风格、4 种比例，数据来自 SEC EDGAR。免费开源。">
+<meta property="og:image" content="https://earningscard.tech/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="earnings-card：输入美股代码，一键生成财报卡（NVDA 封面示例）">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="earnings-card · 财报卡生成器">
+<meta name="twitter:description" content="Type a US ticker, get shareable earnings cards from SEC filings. Free, open source, runs in your browser.">
+<meta name="twitter:image" content="https://earningscard.tech/og.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#F3F0EA">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -17,7 +34,7 @@
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="./"><b>earnings-card</b><span data-i="brand"></span></a>
+  <a class="brand" href="./"><img class="mark" src="favicon.svg" alt="" width="24" height="24"><b>earnings-card</b><span data-i="brand"></span></a>
   <nav>
     <a href="tickers/" id="navTickers" data-i="tickerList"></a>
     <a href="gallery/" data-i="gallery"></a>
@@ -31,54 +48,68 @@
     <h1 data-i="title"></h1>
     <p class="lede" data-i="lede"></p>
 
-    <div class="field">
-      <label for="ticker" class="lab" data-i="ticker"></label>
-      <div class="tkrow">
-        <div class="ac">
-          <input id="ticker" autocomplete="off" spellcheck="false" maxlength="12" value="NVDA" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
-          <ul id="sugg" role="listbox" hidden></ul>
+    <details class="step" id="step1" open>
+      <summary><i>1</i><b data-i="step1"></b><em class="sum" id="sum1"></em></summary>
+      <div class="field">
+        <label for="ticker" class="lab" data-i="ticker"></label>
+        <div class="tkrow">
+          <div class="ac">
+            <input id="ticker" autocomplete="off" spellcheck="false" maxlength="12" value="NVDA" role="combobox" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false">
+            <ul id="sugg" role="listbox" hidden></ul>
+          </div>
+          <button class="primary go" id="go" data-i="generate"></button>
         </div>
-        <button class="primary go" id="go" data-i="generate"></button>
+        <p id="tkerr" class="tkerr" role="alert" hidden></p>
+        <p id="tknote" class="tknote" hidden></p>
+        <div id="recent" class="recent" hidden></div>
       </div>
-      <p id="tkerr" class="tkerr" role="alert" hidden></p>
-      <p id="tknote" class="tknote" hidden></p>
-      <div id="recent" class="recent" hidden></div>
+
+      <div class="quick" id="quick">
+        <div class="qrow" id="qFiled" hidden><small data-i="justFiled"></small><div class="qchips" id="filedChips"></div></div>
+        <details class="qcal" id="qCal" hidden>
+          <summary><small data-i="calendar"></small><span class="qnext" id="calNext"></span></summary>
+          <div class="callist" id="calList"></div>
+        </details>
+      </div>
+
+      <div class="field"><span data-i="period"></span>
+        <div class="seg" id="period"><button data-v="quarter" data-i="quarter"></button><button data-v="annual" data-i="annual"></button></div>
+        <div class="pp" id="pp" hidden>
+          <label><small id="fyLab"></small><select id="fy"></select></label>
+          <label><small id="fqLab"></small><select id="fq"></select></label>
+        </div>
+      </div>
       <small id="coverage" class="hint"></small>
-    </div>
+    </details>
 
-    <div class="field"><span data-i="period"></span>
-      <div class="seg" id="period"><button data-v="quarter" data-i="quarter"></button><button data-v="annual" data-i="annual"></button></div>
-      <div class="pp" id="pp" hidden>
-        <label><small id="fyLab"></small><select id="fy"></select></label>
-        <label><small id="fqLab"></small><select id="fq"></select></label>
+    <details class="step" id="step2">
+      <summary><i>2</i><b data-i="step2"></b><em class="sum" id="sum2"></em></summary>
+      <div class="field"><span data-i="style"></span>
+        <div class="swatches" id="styles"></div>
+        <details class="morest" id="moreStyles"><summary data-i="moreStyles"></summary><div class="swatches" id="styles2"></div></details>
       </div>
-    </div>
 
-    <div class="field"><span data-i="ratio"></span>
-      <div class="seg" id="ratio"><button data-v="4:5">4:5</button><button data-v="1:1">1:1</button><button data-v="9:16">9:16</button><button data-v="16:9">16:9</button></div>
-      <small class="hint" id="ratiohint"></small>
-    </div>
+      <div class="field"><span data-i="ratio"></span>
+        <div class="seg" id="ratio"><button data-v="4:5">4:5</button><button data-v="1:1">1:1</button><button data-v="9:16">9:16</button><button data-v="16:9">16:9</button></div>
+        <small class="hint" id="ratiohint"></small>
+      </div>
 
-    <div class="field"><span data-i="style"></span>
-      <div class="swatches" id="styles"></div>
-    </div>
+      <div class="field"><span data-i="cardLang"></span>
+        <div class="seg" id="lang"><button data-v="zh">中文</button><button data-v="en">English</button></div>
+      </div>
+    </details>
 
-    <div class="field"><span data-i="cardLang"></span>
-      <div class="seg" id="lang"><button data-v="zh">中文</button><button data-v="en">English</button></div>
-    </div>
+    <details class="step" id="step3">
+      <summary><i>3</i><b data-i="step3"></b><em class="sum" id="sum3"></em></summary>
+      <div class="field"><label for="headline" class="lab" data-i="headline"></label>
+        <input id="headline" maxlength="60" data-ph="headlinePh">
+        <div class="ideas" id="ideas" hidden></div>
+        <small class="hint" data-i="headlineHint"></small>
+      </div>
 
-    <div class="field"><label for="headline" class="lab" data-i="headline"></label>
-      <input id="headline" maxlength="60" data-ph="headlinePh">
-      <div class="ideas" id="ideas" hidden></div>
-      <small class="hint" data-i="headlineHint"></small>
-    </div>
-
-    <div class="field"><span data-i="cards"></span>
-      <div class="checks" id="cards"></div>
-    </div>
-
-    <details class="more" id="more">
-      <summary data-i="more"></summary>
+      <div class="field"><span data-i="cards"></span>
+        <div class="checks" id="cards"></div>
+      </div>
 
       <div class="field"><span data-i="extraCards"></span>
         <div class="checks" id="cards2"></div>
@@ -127,7 +158,8 @@
     </div>
     <details class="capbox" id="capbox" hidden><summary data-i="captionShow"></summary><textarea id="caption" rows="8" spellcheck="false"></textarea></details>
     <div id="status" class="status" role="status" aria-live="polite"><div class="spinner"></div>
-      <div class="stx"><p id="statusText"></p><div class="prog" id="prog" hidden><i id="progBar"></i></div></div>
+      <div class="stx"><p id="statusText"></p><div class="prog" id="prog" hidden><i id="progBar"></i></div>
+        <details class="sdetail" id="statusDetail" hidden><summary data-i="details"></summary><code id="statusDetailText"></code></details></div>
       <button class="ghost" id="retry" hidden data-i="retry"></button>
     </div>
     <div id="grid" class="grid"></div>

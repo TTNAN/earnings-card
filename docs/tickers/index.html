@@ -5,10 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>支持的股票 · earnings-card</title>
 <meta name="description" content="earnings-card 财报卡生成器支持的美股列表：代码、公司、行业、可选的季报和年报。Every ticker the earnings card generator supports.">
+<link rel="canonical" href="https://earningscard.tech/tickers/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="earnings-card">
+<meta property="og:url" content="https://earningscard.tech/tickers/">
+<meta property="og:title" content="支持的股票 · earnings-card">
+<meta property="og:description" content="earnings-card 财报卡生成器支持的美股列表：代码、公司、行业、可选的季报和年报。">
+<meta property="og:image" content="https://earningscard.tech/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="支持的股票 · earnings-card">
+<meta name="twitter:description" content="earnings-card 财报卡生成器支持的美股列表：代码、公司、行业、可选的季报和年报。">
+<meta name="twitter:image" content="https://earningscard.tech/og.png">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <link rel="stylesheet" href="../app.css">
 <style>
 .wrap{max-width:1080px;margin:0 auto;padding:24px 24px 60px}
-.wrap h1{font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:0 0 6px;font-weight:800}
+.wrap h1{font-family:var(--serif);font-size:31px;line-height:1.2;letter-spacing:-.01em;margin:0 0 6px;font-weight:700}
 .wrap .lede{max-width:720px}
 .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0 12px}
 .tools input{flex:1 1 240px;font-size:16px}
@@ -40,11 +57,12 @@ tr.grp td i{font-style:normal;color:var(--mute);font-weight:500;font-size:13px;m
   td.go a{padding:3px 8px}
   td.per{white-space:nowrap;font-size:13px}
 }
+@media (max-width:520px){table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}}
 </style>
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="../"><b>earnings-card</b><span data-i="brand"></span></a>
+  <a class="brand" href="../"><img class="mark" src="../favicon.svg" alt="" width="24" height="24"><b>earnings-card</b><span data-i="brand"></span></a>
   <nav>
     <a href="../" id="navGen" data-i="generator"></a>
     <a href="../gallery/" data-i="gallery"></a>
