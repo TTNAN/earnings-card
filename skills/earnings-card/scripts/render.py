@@ -658,7 +658,7 @@ def _num_layout(s, size, weight, ls):
     gap = 0
     if unit_:
         cjk = ord(unit_[0]) > 0x2E80
-        gap = size * (0.01 if cjk else 0.025) - ls + (3 if size < 80 else 0)   # -ls: undo the tracking; +3: small figures render a hair wider in cairo
+        gap = size * (0.01 if cjk else 0.025) - ls * 0.5 + (2 if cjk else 0)   # give back half the tracking (and a hair before 亿) so the unit never touches the digits
     out.append((digits, size, weight, ls, gap))
     if unit_:
         us = round(size * (0.6 if cjk else 0.68))
