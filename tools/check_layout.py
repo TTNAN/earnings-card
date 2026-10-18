@@ -32,12 +32,15 @@ def boxes(svg):
             continue
         x, y, size = float(e.get("x")), float(e.get("y")), float(e.get("font-size"))
         w = _measure_as(e.get("font-family"), s, size, int(e.get("font-weight", 400)), float(e.get("letter-spacing", 0)))
-        out.append((s, x, y - 0.74 * size, x + w, y + 0.2 * size))
+        out.append((s, x, y - 0.74 * size, x + w, y + 0.2 * size, e.get("data-fig")))
     return vb[2], vb[3], out
 
 
 def _measure_as(family, s, size, weight, ls):
     """Measure with the font set the text element names (display headlines use another face than the body)."""
+    for blk in R._BLACK.values():   # weight-900 text names its Black cut first; measure as the plain stack
+        if family and family.startswith(blk + ", "):
+            family = family[len(blk) + 2:]
     fs = next((v for v in R.FONT_SETS.values() if v[0] == family), None)
     if not fs or family == R.FONT:
         return R.measure(s, size, weight, ls)
@@ -52,10 +55,12 @@ def _measure_as(family, s, size, weight, ls):
 def problems(svg, margin=24, slack=2):
     W, H, bs = boxes(svg)
     errs = []
-    for s, x0, y0, x1, y1 in bs:
+    for s, x0, y0, x1, y1, _ in bs:
         if x0 < margin - 8 or x1 > W - margin + 4 or y0 < 0 or y1 > H:
             errs.append(f"out of bounds: {s!r} x {x0:.0f}..{x1:.0f} (W {W:.0f}) y {y0:.0f}..{y1:.0f} (H {H:.0f})")
     for a, b in itertools.combinations(bs, 2):
+        if a[5] and a[5] == b[5]:   # parts of one figure (digits + unit) are kerned together on purpose
+            continue
         ox = min(a[3], b[3]) - max(a[1], b[1])
         oy = min(a[4], b[4]) - max(a[2], b[2])
         if ox > slack and oy > slack:

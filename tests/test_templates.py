@@ -45,9 +45,9 @@ class Templates(unittest.TestCase):
     def test_poster_is_revenue_and_yoy(self):
         d = R.period_record(load("NVDA-v2.json")["quarter"])
         svg = R.card_poster(d, R.L["en"], "en", R.THEMES["light"], "")
-        txt = texts(svg)
+        txt = "".join(texts(svg)).replace(" ", "")   # the figure is drawn in parts (smaller $ and unit)
         self.assertIn(R.money(d["revenue"], "en"), txt)
-        self.assertIn(f'{R.pct(d["revenue_yoy"])} YoY', txt)
+        self.assertIn(f'{R.pct(d["revenue_yoy"])}YoY', txt)
 
     def test_post_uses_handle_or_default(self):
         d = R.period_record(load("NVDA-v2.json")["quarter"])

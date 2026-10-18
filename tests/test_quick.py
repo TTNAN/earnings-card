@@ -117,7 +117,8 @@ class DisplayFont(unittest.TestCase):
     def head_family(self, style, lang, card="cover"):
         svg = dict(R.render_cards(self.d, lang, style, [card], "4:5", "营收翻倍" if lang == "zh" else "Revenue doubled"))[card]
         m = re.search(r'<text [^>]*font-family="([^"]+)"[^>]*>(?:<tspan[^>]*>[^<]*</tspan>)*?<tspan font-family="([^"]+)">(营收翻倍|Revenue doubled)', svg)
-        return m.group(1), m.group(2)
+        strip = lambda f: f.split(", ", 1)[1] if f.split(", ")[0] in R._BLACK.values() else f   # 900: Black cut named first
+        return strip(m.group(1)), strip(m.group(2))
 
     def test_magazine_headline_serif(self):
         self.assertEqual(self.head_family(R.build_style({"base": "light"}), "zh")[1], R.SERIF_SC)
@@ -129,7 +130,9 @@ class DisplayFont(unittest.TestCase):
 
     def test_explicit_font_and_other_styles(self):
         self.assertEqual(self.head_family(R.build_style({"base": "light", "font": "sans"}), "en")[1], R.SANS)
-        self.assertEqual(self.head_family(R.build_style({"base": "dark"}), "en")[1], R.SANS)
+        self.assertEqual(self.head_family(R.build_style({"base": "dark"}), "en")[1], R.SERIF)   # Ink is editorial too
+        self.assertEqual(self.head_family(R.build_style({"base": "pop"}), "en")[1], R.SANS)
+        self.assertEqual(self.head_family(R.build_style({"base": "terminal"}), "en")[1], R.MONO)
 
     def test_display_does_not_leak(self):
         R.render_cards(self.d, "en", R.build_style({"base": "light"}), ["cover", "profit"], "4:5", "Revenue doubled")
