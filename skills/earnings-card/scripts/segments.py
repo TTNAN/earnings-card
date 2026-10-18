@@ -2,7 +2,7 @@
 """Revenue by segment / product / geography, read from the filing's own XBRL instance.
 
 SEC's companyfacts API drops dimensional facts, so this downloads the 10-Q/10-K instance
-(<name>_htm.xml) and its label file, then keeps 3-month revenue facts with exactly one dimension.
+(<name>_htm.xml) and its label file, then keeps 3-month (or full-year) revenue facts with exactly one dimension.
 
 Usage: python3 segments.py <cik> <accession-number> <period_start> <period_end>
 Library: from segments import segments; segments(cik, accn, start, end) -> dict
@@ -92,7 +92,9 @@ def _pick_partition(items, total):
     return sorted(best, key=lambda i: -i["value"]) if best else []
 
 
-def segments(cik, accn, start, end):
+def segments(cik, accn, start, end, yearly=False):
+    """yearly=True reads full fiscal-year facts (10-K) instead of 3-month ones."""
+    lo_d, hi_d = (350, 380) if yearly else (80, 100)
     folder = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accn.replace('-', '')}"
     idx = json.loads(_get_raw(folder + "/index.json", f"idx-{accn}.json"))
     names = [x["name"] for x in idx["directory"]["item"]]
@@ -120,7 +122,7 @@ def segments(cik, accn, start, end):
         if tag not in REV_TAGS or el.text is None:
             continue
         s, e, mem, typed = ctx.get(el.get("contextRef"), (None, None, [], True))
-        if not s or typed or not (80 <= _days(s, e) <= 100):
+        if not s or typed or not (lo_d <= _days(s, e) <= hi_d):
             continue
         is_cur = abs(_days(e, end)) <= 7
         is_prev = abs(_days(e, prev_end)) <= 7
