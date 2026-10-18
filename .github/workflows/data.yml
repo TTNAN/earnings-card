@@ -1,0 +1,62 @@
+name: data
+# Nightly: refresh docs/data/ (card data for the web generator) from SEC EDGAR.
+on:
+  schedule:
+    - cron: "17 9 * * *"     # 09:17 UTC = after US filings settle overnight (17:17 Beijing)
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: "Only these tickers (space separated); empty = everything in tools/tickers.txt"
+        required: false
+permissions:
+  contents: write
+  actions: write   # to start the pages deploy after a data commit
+concurrency:
+  group: data
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # SEC asks for a contact in the User-Agent. Set the SEC_USER_AGENT repo secret to override.
+      SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT || 'earnings-card (github.com/TTNAN/earnings-card) thnssssss7@gmail.com' }}
+      EC_CACHE: ${{ github.workspace }}/.sec-cache
+      EC_MIN_INTERVAL: "0.15"   # <= ~7 requests/second, under SEC's 10/s limit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # filings never change once filed: keep the downloaded ones between runs
+      - uses: actions/cache@v4
+        with:
+          path: .sec-cache
+          key: sec-${{ github.run_id }}
+          restore-keys: sec-
+      - name: Fetch
+        env:
+          TICKERS: ${{ github.event.inputs.tickers }}
+        run: |
+          # company facts refresh every run; filing files are kept ~a month, then re-fetched
+          find .sec-cache -maxdepth 1 -name '[0-9]*.json' -delete 2>/dev/null || true
+          find .sec-cache -maxdepth 1 -type f -mtime +35 -delete 2>/dev/null || true
+          python tools/build_data.py --max-minutes 75 $TICKERS
+      - name: Commit if changed
+        id: commit
+        run: |
+          git add docs/data
+          if git diff --cached --quiet; then
+            echo "No data changes."; echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "data: nightly SEC refresh ($(git diff --cached --name-only | wc -l) files)"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Redeploy Pages
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
