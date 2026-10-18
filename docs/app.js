@@ -72,7 +72,7 @@ const T = {
       miss: (per, f) => `${per === "quarter" ? "最新季报" : "最新年报"}缺${f}`},
     fields: {revenue: "营收", net_income: "净利润", eps: "EPS", ocf: "经营现金流", fcf: "自由现金流"},
     partialHead: "数据不完整：", partialTail: "，相关卡片会缺项或自动隐藏。",
-    stages: {worker: "启动渲染线程", "load cdn": "下载渲染引擎 Pyodide（首次约 10 MB，之后走缓存）", "load local": "CDN 不通，改从本站下载渲染引擎",
+    stages: {worker: "启动渲染线程", probe: "正在准备画笔…", "load npmmirror": "正在准备画笔（首次约 10 MB，之后走缓存）…", "load cdn": "下载渲染引擎 Pyodide（首次约 10 MB，之后走缓存）", "load local": "CDN 不通，改从本站下载渲染引擎",
       "render.py": "加载卡片脚本", init: "初始化渲染引擎", fonts: "加载字体", data: "读取财报数据"},
     bootLine: (s, i, n, sec) => `加载引擎 ${i}/${n}：${s}… ${sec}s`,
     loading: t => `正在读取 ${t} 的财报数据…`, drawing: (i, n) => `渲染中 ${i}/${n}…`, done: n => `已生成 ${n} 张卡片`,
@@ -113,7 +113,7 @@ const T = {
       miss: (per, f) => `latest ${per === "quarter" ? "quarter" : "year"} has no ${f}`},
     fields: {revenue: "revenue", net_income: "net income", eps: "EPS", ocf: "operating cash flow", fcf: "free cash flow"},
     partialHead: "Partial data: ", partialTail: "; some cards will have gaps or be hidden.",
-    stages: {worker: "starting the render thread", "load cdn": "downloading the Pyodide engine (~10 MB the first time, cached after)",
+    stages: {worker: "starting the render thread", probe: "getting the brushes ready…", "load npmmirror": "getting the brushes ready (~10 MB the first time, cached after)…", "load cdn": "downloading the Pyodide engine (~10 MB the first time, cached after)",
       "load local": "CDN unreachable, loading the engine from this site", "render.py": "loading the card script", init: "starting the engine",
       fonts: "loading fonts", data: "loading filings"},
     bootLine: (s, i, n, sec) => `Loading engine ${i}/${n}: ${s}… ${sec}s`,
@@ -933,7 +933,7 @@ function saveLast() {
 }
 
 // ---------- boot ----------
-const STAGES = ["worker", "load cdn", "load local", "render.py", "init"];
+const STAGES = ["worker", "probe", "load npmmirror", "load cdn", "load local", "render.py", "init"];
 let bootT0 = 0, bootStage = "worker", bootTick = null;
 function showBoot() {
   if ($("#status").classList.contains("err") && !$("#status").hidden) return;   // e.g. an unsupported ticker: keep saying so

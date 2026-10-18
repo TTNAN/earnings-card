@@ -29,8 +29,11 @@
 
 "use strict";
 const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+const NPMMIRROR = "https://cdn.npmmirror.com/packages/pyodide/0.26.4/files/";   // Alibaba CDN, fast in mainland China
 const LOCAL_PYODIDE = new URL("pyodide/", self.location.href).href;
-const TIMEOUT = 45000;
+const SOURCES = [NPMMIRROR, PYODIDE, LOCAL_PYODIDE];
+const PROBE_TIMEOUT = 6000;
+const TIMEOUT = 90000;
 
 let py = null, stage = "start";
 const queue = [];   // messages that arrive before the engine is up
@@ -40,6 +43,28 @@ async function getText(path) {
   const r = await fetch(new URL(path, self.location.href).href);
   if (!r.ok) throw new Error(path + " " + r.status);
   return r.text();
+}
+
+// importScripts is synchronous and has no timeout: on a stalled CDN it hangs the worker forever.
+// So first fetch pyodide.js from every source at once (with a short timeout) and order the sources
+// by who answered first; importScripts then reads the already-fetched file from the HTTP cache.
+async function probe(base) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), PROBE_TIMEOUT);
+  const t0 = Date.now();
+  try {
+    const r = await fetch(base + "pyodide.js", {signal: ctl.signal, cache: "force-cache"});
+    if (!r.ok) throw new Error("status " + r.status);
+    await r.text();
+    return Date.now() - t0;
+  } finally { clearTimeout(t); }
+}
+
+async function rankSources() {
+  const res = await Promise.all(SOURCES.map(b => probe(b).then(ms => ({b, ms}), () => ({b, ms: Infinity}))));
+  const ok = res.filter(r => r.ms < Infinity).sort((a, z) => a.ms - z.ms).map(r => r.b);
+  const rest = SOURCES.filter(b => !ok.includes(b));
+  return ok.concat(rest);
 }
 
 async function loadFrom(base) {
@@ -58,8 +83,10 @@ async function boot() {
   const srcP = Promise.all([getText("py/render.py"), getText("py/measure_tables.py")]);
   srcP.catch(() => {});
   let pyo = null, lastErr = null;
-  for (const base of [PYODIDE, LOCAL_PYODIDE]) {      // CDN first, then the copy in this repo
-    setStage("load " + (base === PYODIDE ? "cdn" : "local"));
+  setStage("probe");
+  const order = await rankSources();
+  for (const base of order) {
+    setStage("load " + (base === LOCAL_PYODIDE ? "local" : base === NPMMIRROR ? "npmmirror" : "cdn"));
     try { pyo = await loadFrom(base); break; }
     catch (e) { console.warn("pyodide from", base, "failed:", e); lastErr = e; pyo = null; }
   }
