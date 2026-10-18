@@ -1,0 +1,190 @@
+{
+  "ticker": "NVDA",
+  "period": "annual",
+  "company": "NVIDIA CORP",
+  "period_start": "2025-01-27",
+  "period_end": "2026-01-25",
+  "filed": "2026-02-25",
+  "form": "10-K",
+  "fiscal_label": "FY2026",
+  "revenue": 215938000000,
+  "revenue_yoy": 0.654735357900948,
+  "gross_margin": 0.7106808435754708,
+  "gross_margin_prev": 0.7498869705816992,
+  "operating_income": 130387000000,
+  "operating_margin": 0.6038168363141272,
+  "net_income": 120067000000,
+  "net_income_yoy": 0.6474615806805708,
+  "eps": 4.9,
+  "eps_yoy": 0.6666666666666669,
+  "rnd": 18497000000,
+  "sga": 4579000000,
+  "tax": 21383000000,
+  "cost_of_revenue": 62475000000,
+  "ocf": 102718000000,
+  "capex": 6042000000,
+  "fcf": 96676000000,
+  "buyback": 40086000000,
+  "dividends": 974000000,
+  "cash": 10605000000,
+  "securities": null,
+  "trend": [
+    {
+      "end": "2022-01-30",
+      "revenue": 26914000000,
+      "net_income": 9752000000,
+      "gross_margin": 0.6492903321691313,
+      "operating_margin": 0.3730772088875678,
+      "net_margin": 0.3623393029649996,
+      "fcf": 8132000000,
+      "label": "FY22"
+    },
+    {
+      "end": "2023-01-29",
+      "revenue": 26974000000,
+      "net_income": 4368000000,
+      "gross_margin": 0.5692889449099132,
+      "operating_margin": 0.1565952398606065,
+      "net_margin": 0.16193371394676356,
+      "fcf": 3808000000,
+      "label": "FY23"
+    },
+    {
+      "end": "2024-01-28",
+      "revenue": 60922000000,
+      "net_income": 29760000000,
+      "gross_margin": 0.7271757329043695,
+      "operating_margin": 0.5412166376678376,
+      "net_margin": 0.4884934834706674,
+      "fcf": 27021000000,
+      "label": "FY24"
+    },
+    {
+      "end": "2025-01-26",
+      "revenue": 130497000000,
+      "net_income": 72880000000,
+      "gross_margin": 0.7498869705816992,
+      "operating_margin": 0.6241752683969747,
+      "net_margin": 0.5584802715771244,
+      "fcf": 60853000000,
+      "label": "FY25"
+    },
+    {
+      "end": "2026-01-25",
+      "revenue": 215938000000,
+      "net_income": 120067000000,
+      "gross_margin": 0.7106808435754708,
+      "operating_margin": 0.6038168363141272,
+      "net_margin": 0.5560253406070261,
+      "fcf": 96676000000,
+      "label": "FY26"
+    }
+  ],
+  "source": "SEC EDGAR · 10-K filed 2026-02-25",
+  "cik": 1045810,
+  "accn": "0001045810-26-000021",
+  "segments": {
+    "product": [
+      {
+        "member": "nvda:ComputeMember",
+        "label": "Compute",
+        "value": 162361000000.0,
+        "prev": 102196000000.0,
+        "share": 0.7518871157461864,
+        "yoy": 0.588721672081099
+      },
+      {
+        "member": "nvda:NetworkingMember",
+        "label": "Networking",
+        "value": 31376000000.0,
+        "prev": 12990000000.0,
+        "share": 0.1453009660180237,
+        "yoy": 1.4153964588144727
+      },
+      {
+        "member": "nvda:GamingMember",
+        "label": "Gaming",
+        "value": 16042000000.0,
+        "prev": 11350000000.0,
+        "share": 0.07428984245477868,
+        "yoy": 0.4133920704845815
+      },
+      {
+        "member": "nvda:ProfessionalVisualizationMember",
+        "label": "Professional Visualization",
+        "value": 3191000000.0,
+        "prev": 1878000000.0,
+        "share": 0.014777389806333299,
+        "yoy": 0.6991480298189563
+      },
+      {
+        "member": "nvda:AutomotiveMember",
+        "label": "Automotive",
+        "value": 2349000000.0,
+        "prev": 1694000000.0,
+        "share": 0.01087812242402912,
+        "yoy": 0.38665879574970485
+      },
+      {
+        "member": "nvda:OEMAndOtherMember",
+        "label": "OEM and Other",
+        "value": 619000000.0,
+        "prev": 389000000.0,
+        "share": 0.0028665635506487973,
+        "yoy": 0.5912596401028277
+      }
+    ],
+    "segment": [
+      {
+        "member": "nvda:ComputeAndNetworkingSegmentMember",
+        "label": "Compute & Networking",
+        "value": 193479000000.0,
+        "prev": 116193000000.0,
+        "share": 0.8959932943715325,
+        "yoy": 0.665151945470037
+      },
+      {
+        "member": "nvda:GraphicsSegmentMember",
+        "label": "Graphics",
+        "value": 22459000000.0,
+        "prev": 14304000000.0,
+        "share": 0.10400670562846744,
+        "yoy": 0.5701202460850112
+      }
+    ],
+    "geo": [
+      {
+        "member": "country:US",
+        "label": "United States",
+        "value": 149617000000.0,
+        "prev": 77482000000.0,
+        "share": 0.6928701756985801,
+        "yoy": 0.9309904235822514
+      },
+      {
+        "member": "country:TW",
+        "label": "Taiwan",
+        "value": 42345000000.0,
+        "prev": 23600000000.0,
+        "share": 0.19609795404236402,
+        "yoy": 0.7942796610169491
+      },
+      {
+        "member": "nvda:ChinaIncludingHongKongMember",
+        "label": "China (including Hong Kong)",
+        "value": 19677000000.0,
+        "prev": 25048000000.0,
+        "share": 0.09112337800665006,
+        "yoy": -0.21442829766847651
+      },
+      {
+        "member": "nvda:OtherCountriesMember",
+        "label": "Other",
+        "value": 4299000000.0,
+        "prev": 4367000000.0,
+        "share": 0.019908492252405784,
+        "yoy": -0.01557133043279139
+      }
+    ]
+  }
+}

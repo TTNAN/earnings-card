@@ -1,0 +1,144 @@
+{
+  "ticker": "JPM",
+  "period": "quarter",
+  "company": "JPMORGAN CHASE & CO",
+  "period_start": "2026-04-01",
+  "period_end": "2026-06-30",
+  "filed": "2026-08-06",
+  "form": "10-Q",
+  "fiscal_label": "FY2026 Q2",
+  "revenue": 57347000000,
+  "revenue_yoy": 0.2768747773423584,
+  "gross_margin": null,
+  "gross_margin_prev": null,
+  "operating_income": null,
+  "operating_margin": null,
+  "net_income": 21155000000,
+  "net_income_yoy": 0.4115566824581304,
+  "eps": 7.7,
+  "eps_yoy": 0.4694656488549618,
+  "rnd": null,
+  "sga": null,
+  "tax": 6361000000,
+  "cost_of_revenue": null,
+  "ocf": -25283000000,
+  "capex": null,
+  "fcf": -25283000000,
+  "buyback": 6788000000,
+  "dividends": 4342000000,
+  "cash": 309811000000,
+  "securities": null,
+  "trend": [
+    {
+      "end": "2024-09-30",
+      "revenue": 42654000000,
+      "net_income": 12898000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.30238664603554183,
+      "fcf": -74081000000
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 42768000000,
+      "net_income": 14034000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.32814253647586983,
+      "fcf": 147758000000
+    },
+    {
+      "end": "2025-03-31",
+      "revenue": 45310000000,
+      "net_income": 14643000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.32317369234164645,
+      "fcf": -251839000000
+    },
+    {
+      "end": "2025-06-30",
+      "revenue": 44912000000,
+      "net_income": 14987000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.33369700748129677,
+      "fcf": 29547000000
+    },
+    {
+      "end": "2025-09-30",
+      "revenue": 46427000000,
+      "net_income": 14393000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.31001356969005106,
+      "fcf": -45214000000
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 45798000000,
+      "net_income": 12977000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.28335298484649984,
+      "fcf": 119724000000
+    },
+    {
+      "end": "2026-03-31",
+      "revenue": 49836000000,
+      "net_income": 16494000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.33096556705995667,
+      "fcf": -211761000000
+    },
+    {
+      "end": "2026-06-30",
+      "revenue": 57347000000,
+      "net_income": 21155000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.3688946239559175,
+      "fcf": -25283000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-Q filed 2026-08-06",
+  "cik": 19617,
+  "accn": "0001628280-26-054343",
+  "segments": {
+    "segment": [
+      {
+        "member": "jpm:CommercialAndInvestmentBankMember",
+        "label": "Commercial & Investment Bank",
+        "value": 24853000000.0,
+        "prev": 19535000000.0,
+        "share": 0.433379252620015,
+        "yoy": 0.2722293319682621
+      },
+      {
+        "member": "jpm:ConsumerCommunityBankingMember",
+        "label": "Consumer & Community Banking",
+        "value": 20272000000.0,
+        "prev": 18847000000.0,
+        "share": 0.3534971314977244,
+        "yoy": 0.0756088502148883
+      },
+      {
+        "member": "jpm:AssetandWealthManagementSegmentMember",
+        "label": "Asset & Wealth Management",
+        "value": 6851000000.0,
+        "prev": 5760000000.0,
+        "share": 0.11946570875547108,
+        "yoy": 0.18940972222222222
+      },
+      {
+        "member": "other",
+        "label": "Other",
+        "value": 5371000000.0,
+        "prev": null,
+        "share": 0.09365790712678955,
+        "yoy": null
+      }
+    ]
+  }
+}

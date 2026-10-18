@@ -1,0 +1,156 @@
+{
+  "ticker": "JPM",
+  "period": "annual",
+  "company": "JPMORGAN CHASE & CO",
+  "period_start": "2025-01-01",
+  "period_end": "2025-12-31",
+  "filed": "2026-02-13",
+  "form": "10-K",
+  "fiscal_label": "FY2025",
+  "revenue": 182447000000,
+  "revenue_yoy": 0.027546238933069005,
+  "gross_margin": null,
+  "gross_margin_prev": null,
+  "operating_income": null,
+  "operating_margin": null,
+  "net_income": 57048000000,
+  "net_income_yoy": -0.02433685074652392,
+  "eps": 20.02,
+  "eps_yoy": 0.013670886075949346,
+  "rnd": null,
+  "sga": null,
+  "tax": 15547000000,
+  "cost_of_revenue": null,
+  "ocf": -147782000000,
+  "capex": null,
+  "fcf": -147782000000,
+  "buyback": 31591000000,
+  "dividends": 16625000000,
+  "cash": 343338000000,
+  "securities": null,
+  "trend": [
+    {
+      "end": "2021-12-31",
+      "revenue": 121649000000,
+      "net_income": 48334000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.3973234469662718,
+      "fcf": 78084000000,
+      "label": "FY21"
+    },
+    {
+      "end": "2022-12-31",
+      "revenue": 128695000000,
+      "net_income": 37676000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.29275418625432226,
+      "fcf": 107119000000,
+      "label": "FY22"
+    },
+    {
+      "end": "2023-12-31",
+      "revenue": 158104000000,
+      "net_income": 49552000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.3134139553711481,
+      "fcf": 12974000000,
+      "label": "FY23"
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 177556000000,
+      "net_income": 58471000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.32931018946135304,
+      "fcf": -42012000000,
+      "label": "FY24"
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 182447000000,
+      "net_income": 57048000000,
+      "gross_margin": null,
+      "operating_margin": null,
+      "net_margin": 0.31268258727192005,
+      "fcf": -147782000000,
+      "label": "FY25"
+    }
+  ],
+  "source": "SEC EDGAR · 10-K filed 2026-02-13",
+  "cik": 19617,
+  "accn": "0001628280-26-008131",
+  "segments": {
+    "segment": [
+      {
+        "member": "jpm:CommercialAndInvestmentBankMember",
+        "label": "Commercial & Investment Bank",
+        "value": 78454000000.0,
+        "prev": 70114000000.0,
+        "share": 0.43000981106841984,
+        "yoy": 0.11894913997204552
+      },
+      {
+        "member": "jpm:ConsumerCommunityBankingMember",
+        "label": "Consumer & Community Banking",
+        "value": 76029000000.0,
+        "prev": 71507000000.0,
+        "share": 0.41671827982921067,
+        "yoy": 0.06323856405666578
+      },
+      {
+        "member": "jpm:AssetandWealthManagementSegmentMember",
+        "label": "Asset & Wealth Management",
+        "value": 24073000000.0,
+        "prev": 21578000000.0,
+        "share": 0.13194516763772493,
+        "yoy": 0.11562702752803782
+      },
+      {
+        "member": "other",
+        "label": "Other",
+        "value": 3891000000.0,
+        "prev": null,
+        "share": 0.021326741464644527,
+        "yoy": null
+      }
+    ],
+    "geo": [
+      {
+        "member": "srt:NorthAmericaMember",
+        "label": "North America",
+        "value": 139689000000.0,
+        "prev": 139323000000.0,
+        "share": 0.7656415287727395,
+        "yoy": 0.0026269890829224178
+      },
+      {
+        "member": "us-gaap:EMEAMember",
+        "label": "Europe/Middle East/Africa",
+        "value": 24478000000.0,
+        "prev": 22353000000.0,
+        "share": 0.13416499038076812,
+        "yoy": 0.09506553930121237
+      },
+      {
+        "member": "srt:AsiaPacificMember",
+        "label": "Asia-Pacific",
+        "value": 14065000000.0,
+        "prev": 11995000000.0,
+        "share": 0.07709088118741333,
+        "yoy": 0.17257190496040017
+      },
+      {
+        "member": "srt:LatinAmericaMember",
+        "label": "Latin America/Caribbean",
+        "value": 4215000000.0,
+        "prev": 3885000000.0,
+        "share": 0.023102599659079074,
+        "yoy": 0.08494208494208494
+      }
+    ]
+  }
+}
