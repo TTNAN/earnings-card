@@ -1,0 +1,203 @@
+{
+  "ticker": "TSLA",
+  "company": "Tesla, Inc.",
+  "period_start": "2026-04-01",
+  "period_end": "2026-06-30",
+  "filed": "2026-07-23",
+  "form": "10-Q",
+  "fiscal_label": "FY2026 Q2",
+  "revenue": 28236000000,
+  "revenue_yoy": 0.25515647226173543,
+  "gross_margin": 0.16826037682391273,
+  "gross_margin_prev": 0.17238620199146515,
+  "operating_income": 398000000,
+  "operating_margin": 0.014095480946309675,
+  "net_income": 1114000000,
+  "net_income_yoy": -0.04948805460750853,
+  "eps": 0.32,
+  "eps_yoy": -0.030303030303030328,
+  "rnd": 2371000000,
+  "sga": 1982000000,
+  "tax": 201000000,
+  "cost_of_revenue": 23485000000,
+  "ocf": 4697000000,
+  "capex": 5789000000,
+  "fcf": -1092000000,
+  "buyback": null,
+  "dividends": null,
+  "cash": 15219000000,
+  "securities": 28305000000,
+  "trend": [
+    {
+      "end": "2024-09-30",
+      "revenue": 25182000000,
+      "net_income": 2173000000,
+      "gross_margin": 0.19843539035819235,
+      "operating_margin": 0.10789452783734413,
+      "net_margin": 0.08629179572710666,
+      "fcf": 2742000000
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 25707000000,
+      "net_income": 2128000000,
+      "gross_margin": 0.16256272610572994,
+      "operating_margin": 0.06157855836931575,
+      "net_margin": 0.0827790096082779,
+      "fcf": 2034000000
+    },
+    {
+      "end": "2025-03-31",
+      "revenue": 19335000000,
+      "net_income": 409000000,
+      "gross_margin": 0.1630721489526765,
+      "operating_margin": 0.020636152055857254,
+      "net_margin": 0.021153348849237134,
+      "fcf": 664000000
+    },
+    {
+      "end": "2025-06-30",
+      "revenue": 22496000000,
+      "net_income": 1172000000,
+      "gross_margin": 0.17238620199146515,
+      "operating_margin": 0.041029516358463726,
+      "net_margin": 0.05209815078236131,
+      "fcf": 146000000
+    },
+    {
+      "end": "2025-09-30",
+      "revenue": 28095000000,
+      "net_income": 1373000000,
+      "gross_margin": 0.1798896600818651,
+      "operating_margin": 0.057803879693895714,
+      "net_margin": 0.04886990567716676,
+      "fcf": 3990000000
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 24901000000,
+      "net_income": 840000000,
+      "gross_margin": 0.20115658005702583,
+      "operating_margin": 0.05658407292879804,
+      "net_margin": 0.033733584996586484,
+      "fcf": 1420000000
+    },
+    {
+      "end": "2026-03-31",
+      "revenue": 22387000000,
+      "net_income": 477000000,
+      "gross_margin": 0.21083664626792334,
+      "operating_margin": 0.04203332291061777,
+      "net_margin": 0.02130700853173717,
+      "fcf": 1444000000
+    },
+    {
+      "end": "2026-06-30",
+      "revenue": 28236000000,
+      "net_income": 1114000000,
+      "gross_margin": 0.16826037682391273,
+      "operating_margin": 0.014095480946309675,
+      "net_margin": 0.039453180337158236,
+      "fcf": -1092000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-Q filed 2026-07-23",
+  "cik": 1318605,
+  "accn": "0001628280-26-049270",
+  "segments": {
+    "product": [
+      {
+        "member": "tsla:AutomotiveSalesMember",
+        "label": "Automotive sales",
+        "value": 20006000000.0,
+        "prev": 15787000000.0,
+        "share": 0.7085281201303301,
+        "yoy": 0.2672452017482739
+      },
+      {
+        "member": "tsla:ServicesAndOtherMember",
+        "label": "Services and other",
+        "value": 4581000000.0,
+        "prev": 3046000000.0,
+        "share": 0.16223969400764982,
+        "yoy": 0.5039395929087328
+      },
+      {
+        "member": "tsla:EnergyGenerationAndStorageMember",
+        "label": "Energy generation and storage",
+        "value": 3139000000.0,
+        "prev": 2789000000.0,
+        "share": 0.11117013741323134,
+        "yoy": 0.1254930082466834
+      },
+      {
+        "member": "tsla:AutomotiveLeasingMember",
+        "label": "Automotive leasing",
+        "value": 364000000.0,
+        "prev": 435000000.0,
+        "share": 0.01289134438305709,
+        "yoy": -0.1632183908045977
+      },
+      {
+        "member": "tsla:AutomotiveRegulatoryCreditsMember",
+        "label": "Automotive regulatory credits",
+        "value": 146000000.0,
+        "prev": 439000000.0,
+        "share": 0.00517070406573169,
+        "yoy": -0.6674259681093394
+      },
+      {
+        "member": "tsla:EnergyGenerationAndStorageLeasingMember",
+        "label": "Energy generation and storage leasing",
+        "value": 141000000.0,
+        "prev": 143000000.0,
+        "share": 0.004993625159371015,
+        "yoy": -0.013986013986013986
+      }
+    ],
+    "segment": [
+      {
+        "member": "tsla:AutomotiveSegmentMember",
+        "label": "Automotive",
+        "value": 25097000000.0,
+        "prev": 19707000000.0,
+        "share": 0.8888298625867687,
+        "yoy": 0.2735068757294362
+      },
+      {
+        "member": "tsla:EnergyGenerationAndStorageSegmentMember",
+        "label": "Energy generation and storage",
+        "value": 3139000000.0,
+        "prev": 2789000000.0,
+        "share": 0.11117013741323134,
+        "yoy": 0.1254930082466834
+      }
+    ],
+    "geo": [
+      {
+        "member": "country:US",
+        "label": "United States",
+        "value": 13208000000.0,
+        "prev": 11809000000.0,
+        "share": 0.4677716390423573,
+        "yoy": 0.11846896434922517
+      },
+      {
+        "member": "us-gaap:NonUsMember",
+        "label": "Other international",
+        "value": 10353000000.0,
+        "prev": 6382000000.0,
+        "share": 0.3666595835104122,
+        "yoy": 0.6222187402068318
+      },
+      {
+        "member": "country:CN",
+        "label": "China",
+        "value": 4675000000.0,
+        "prev": 4305000000.0,
+        "share": 0.16556877744723048,
+        "yoy": 0.0859465737514518
+      }
+    ]
+  }
+}

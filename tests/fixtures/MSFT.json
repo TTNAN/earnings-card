@@ -1,0 +1,108 @@
+{
+  "ticker": "MSFT",
+  "company": "MICROSOFT CORP",
+  "period_start": "2026-03-31",
+  "period_end": "2026-06-30",
+  "filed": "2026-07-29",
+  "form": "10-K (derived)",
+  "fiscal_label": "FY2026 Q4",
+  "revenue": 90007000000,
+  "revenue_yoy": 0.1774702057796209,
+  "gross_margin": 0.671969957892164,
+  "gross_margin_prev": 0.6858492170432098,
+  "operating_income": 40603000000,
+  "operating_margin": 0.4511093581610319,
+  "net_income": 35766000000,
+  "net_income_yoy": 0.31333308853229536,
+  "eps": 4.809999999999999,
+  "eps_yoy": 0.3178082191780817,
+  "rnd": 9997000000,
+  "sga": null,
+  "tax": 8281000000,
+  "cost_of_revenue": 29525000000,
+  "ocf": 55441000000,
+  "capex": 35802000000,
+  "fcf": 19639000000,
+  "buyback": 4579000000,
+  "dividends": 6758000000,
+  "cash": 20935000000,
+  "securities": 55908000000,
+  "trend": [
+    {
+      "end": "2024-09-30",
+      "revenue": 65585000000,
+      "net_income": 24667000000,
+      "gross_margin": 0.6935427308073493,
+      "operating_margin": 0.4658382252039338,
+      "net_margin": 0.37610734161774795,
+      "fcf": 19257000000
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 69632000000,
+      "net_income": 24108000000,
+      "gross_margin": 0.6869399126838235,
+      "operating_margin": 0.4545754825367647,
+      "net_margin": 0.34622012867647056,
+      "fcf": 6487000000
+    },
+    {
+      "end": "2025-03-31",
+      "revenue": 70066000000,
+      "net_income": 25824000000,
+      "gross_margin": 0.6871663859789342,
+      "operating_margin": 0.456712242742557,
+      "net_margin": 0.3685667798932435,
+      "fcf": 20299000000
+    },
+    {
+      "end": "2025-06-30",
+      "revenue": 76441000000,
+      "net_income": 27233000000,
+      "gross_margin": 0.6858492170432098,
+      "operating_margin": 0.44901296424693554,
+      "net_margin": 0.3562616920239139,
+      "fcf": 25568000000
+    },
+    {
+      "end": "2025-09-30",
+      "revenue": 77673000000,
+      "net_income": 27747000000,
+      "gross_margin": 0.6904587179586213,
+      "operating_margin": 0.48872838695557014,
+      "net_margin": 0.35722838051832684,
+      "fcf": 25663000000
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 81273000000,
+      "net_income": 38458000000,
+      "gross_margin": 0.6803612515841669,
+      "operating_margin": 0.47094360980891564,
+      "net_margin": 0.473195280105324,
+      "fcf": 5882000000
+    },
+    {
+      "end": "2026-03-31",
+      "revenue": 82886000000,
+      "net_income": 31778000000,
+      "gross_margin": 0.6763265207634582,
+      "operating_margin": 0.46326279468185216,
+      "net_margin": 0.3833940593103781,
+      "fcf": 15803000000
+    },
+    {
+      "end": "2026-06-30",
+      "revenue": 90007000000,
+      "net_income": 35766000000,
+      "gross_margin": 0.671969957892164,
+      "operating_margin": 0.4511093581610319,
+      "net_margin": 0.3973690935149488,
+      "fcf": 19639000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-K (derived) filed 2026-07-29",
+  "cik": 789019,
+  "accn": "0001193125-26-323660",
+  "segments": {}
+}

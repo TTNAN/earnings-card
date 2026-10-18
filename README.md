@@ -6,8 +6,9 @@
 
 一个 Agent skill：读取美股公司最新的 SEC 财报，生成 **7 张杂志质感的卡片**：一句话结论、钱从哪里来、利润拆解、利润率趋势、现金流、管理层指引，外加一张横版封面。
 
-**简体中文** · [English](./README.en.md)
+**简体中文** · [English](./README.en.md) · [**在线画廊：七巨头整套财报卡 →**](https://ttnan.github.io/earnings-card/)
 
+![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
 ![Data](https://img.shields.io/badge/数据-SEC%20EDGAR-8C6A3F?style=flat-square)
 ![API key](https://img.shields.io/badge/API%20key-不需要-1E7A4C?style=flat-square)
@@ -132,11 +133,21 @@ python3 render.py nvda.json --out NVDA --headline "营收同比翻倍，毛利�
 - 分部营收需要 10-Q；财年第四季度（年报 10-K）这张卡会跳过。
 - 只有公司在新闻稿里给出数字指引时才有指引卡。苹果、微软、特斯拉只在电话会上讲，这张卡会自动跳过。
 
+## 开发
+
+数字对不对是这个项目的命，所以每张卡上印出来的每个数字都有金标测试（`tests/golden`），分部拆分逻辑另有单测。不需要装任何依赖：
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+有意改动卡片后，用 `UPDATE_GOLDEN=1` 重新生成快照，并在 PR 里说明变化。
+
 ## 路线图
 
 - [ ] 对比市场一致预期，看超预期还是不及预期（自带预期值）
 - [ ] 银行、保险公司专用版式
-- [ ] 七巨头财报在线画廊
+- [x] [七巨头财报在线画廊](https://ttnan.github.io/earnings-card/)
 - [ ] A 股、港股
 
 欢迎在 issue 里提想法和 bug。

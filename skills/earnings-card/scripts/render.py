@@ -3,13 +3,16 @@
 
 Usage:
   python3 render.py data.json --out ./NVDA [--lang zh|en] [--headline "一句话结论"]
-                    [--theme light|dark] [--cards cover,profit,trend,cash,wide] [--png]
+                    [--theme light|dark] [--cards cover,mix,profit,trend,cash,guide,wide]
+                    [--guidance guidance.json] [--labels labels.json] [--png]
 
 Cards (1080x1350 unless noted):
   cover   headline, revenue, 8-quarter revenue bars, 4 key metrics
+  mix     revenue by business and by region (skipped when the filing has no breakdown)
   profit  waterfall: how every dollar of revenue becomes net income
   trend   8-quarter gross / operating / net margin lines + net income bars
   cash    operating cash flow, capex, free cash flow, buybacks, dividends, cash pile
+  guide   next-quarter outlook and last outlook vs actual (only with --guidance)
   wide    1600x900 landscape cover for X / slides
 """
 import re, json, sys, html, argparse, os, glob

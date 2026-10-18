@@ -6,8 +6,9 @@
 
 An agent skill that turns the latest SEC filing of any US-listed company into **7 editorial-grade cards**: headline, revenue mix, profit waterfall, margin trend, cash flow, management guidance, and a landscape cover.
 
-[简体中文](./README.md) · **English**
+[简体中文](./README.md) · **English** · [**Live gallery: full Mag 7 card sets →**](https://ttnan.github.io/earnings-card/?lang=en)
 
+![Tests](https://github.com/TTNAN/earnings-card/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-151515?style=flat-square)
 ![Data](https://img.shields.io/badge/data-SEC%20EDGAR-8C6A3F?style=flat-square)
 ![API key](https://img.shields.io/badge/API%20key-not%20needed-1E7A4C?style=flat-square)
@@ -132,11 +133,21 @@ ticker ─▶ SEC EDGAR companyfacts ─▶ 8 quarters of GAAP numbers
 - Revenue mix needs a 10-Q; for a fiscal Q4 (reported in the 10-K) that card is skipped.
 - Guidance only when the company puts numbers in its earnings release. Apple, Microsoft and Tesla give theirs on the call, so that card is skipped for them.
 
+## Development
+
+Correct numbers are the whole product, so every number printed on every card is covered by golden tests (`tests/golden`), and the segment-splitting logic has its own unit tests. No dependencies needed:
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+After an intentional card change, refresh the snapshots with `UPDATE_GOLDEN=1` and explain the diff in your PR.
+
 ## Roadmap
 
 - [ ] Beat / miss vs consensus (bring your own estimates)
 - [ ] Banks and insurers layout
-- [ ] Online gallery for every Mag 7 report
+- [x] [Online gallery for every Mag 7 report](https://ttnan.github.io/earnings-card/?lang=en)
 - [ ] A-shares and Hong Kong stocks
 
 Ideas and bug reports are welcome in issues.

@@ -1,0 +1,161 @@
+{
+  "ticker": "META",
+  "company": "Meta Platforms, Inc.",
+  "period_start": "2026-04-01",
+  "period_end": "2026-06-30",
+  "filed": "2026-07-30",
+  "form": "10-Q",
+  "fiscal_label": "FY2026 Q2",
+  "revenue": 60801000000,
+  "revenue_yoy": 0.2795900328310464,
+  "gross_margin": 0.8136543806845282,
+  "gross_margin_prev": 0.821302298173247,
+  "operating_income": 18775000000,
+  "operating_margin": 0.3087942632522491,
+  "net_income": 15848000000,
+  "net_income_yoy": -0.1357364890658232,
+  "eps": 6.18,
+  "eps_yoy": -0.13445378151260504,
+  "rnd": 21656000000,
+  "sga": null,
+  "tax": 2908000000,
+  "cost_of_revenue": 11330000000,
+  "ocf": 31862000000,
+  "capex": 30116000000,
+  "fcf": 1746000000,
+  "buyback": 0,
+  "dividends": 1353000000,
+  "cash": 15462000000,
+  "securities": 74798000000,
+  "trend": [
+    {
+      "end": "2024-09-30",
+      "revenue": 40589000000,
+      "net_income": 15688000000,
+      "gross_margin": 0.8183005247727216,
+      "operating_margin": 0.4274557146024785,
+      "net_margin": 0.3865086599817685,
+      "fcf": 16466000000
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 48385000000,
+      "net_income": 20838000000,
+      "gross_margin": 0.8173194171747442,
+      "operating_margin": 0.48287692466673554,
+      "net_margin": 0.43067066239537044,
+      "fcf": 13563000000
+    },
+    {
+      "end": "2025-03-31",
+      "revenue": 42314000000,
+      "net_income": 16644000000,
+      "gross_margin": 0.8210521340454696,
+      "operating_margin": 0.414874509618566,
+      "net_margin": 0.39334499220116276,
+      "fcf": 11085000000
+    },
+    {
+      "end": "2025-06-30",
+      "revenue": 47516000000,
+      "net_income": 18337000000,
+      "gross_margin": 0.821302298173247,
+      "operating_margin": 0.43019193534809325,
+      "net_margin": 0.38591211381429413,
+      "fcf": 9023000000
+    },
+    {
+      "end": "2025-09-30",
+      "revenue": 51242000000,
+      "net_income": 2709000000,
+      "gross_margin": 0.820342687639046,
+      "operating_margin": 0.4007454822216151,
+      "net_margin": 0.05286678896217946,
+      "fcf": 11170000000
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 59893000000,
+      "net_income": 22768000000,
+      "gross_margin": 0.8179086036765565,
+      "operating_margin": 0.4131534569983137,
+      "net_margin": 0.3801445911876179,
+      "fcf": 14831000000
+    },
+    {
+      "end": "2026-03-31",
+      "revenue": 56311000000,
+      "net_income": 26773000000,
+      "gross_margin": 0.8185434462183232,
+      "operating_margin": 0.40617286143027115,
+      "net_margin": 0.47544884658414877,
+      "fcf": 13229000000
+    },
+    {
+      "end": "2026-06-30",
+      "revenue": 60801000000,
+      "net_income": 15848000000,
+      "gross_margin": 0.8136543806845282,
+      "operating_margin": 0.3087942632522491,
+      "net_margin": 0.2606536076709265,
+      "fcf": 1746000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-Q filed 2026-07-30",
+  "cik": 1326801,
+  "accn": "0001628280-26-050705",
+  "segments": {
+    "segment": [
+      {
+        "member": "meta:FamilyOfAppsMember",
+        "label": "Family of Apps",
+        "value": 60370000000.0,
+        "prev": 47146000000.0,
+        "share": 0.9929113008009737,
+        "yoy": 0.28049039154965427
+      },
+      {
+        "member": "meta:RealityLabsMember",
+        "label": "Reality Labs",
+        "value": 431000000.0,
+        "prev": 370000000.0,
+        "share": 0.007088699199026331,
+        "yoy": 0.16486486486486487
+      }
+    ],
+    "geo": [
+      {
+        "member": "meta:USCanadaMember",
+        "label": "US & Canada",
+        "value": 23863000000.0,
+        "prev": 18454000000.0,
+        "share": 0.39247709741616094,
+        "yoy": 0.29310718543405223
+      },
+      {
+        "member": "srt:AsiaPacificMember",
+        "label": "Asia Pacific",
+        "value": 16073000000.0,
+        "prev": 12858000000.0,
+        "share": 0.2643542047005806,
+        "yoy": 0.25003888629646914
+      },
+      {
+        "member": "srt:EuropeMember",
+        "label": "Europe",
+        "value": 14009000000.0,
+        "prev": 11128000000.0,
+        "share": 0.23040739461522014,
+        "yoy": 0.2588964773544213
+      },
+      {
+        "member": "meta:RestOfWorldMember",
+        "label": "Rest Of World",
+        "value": 6856000000.0,
+        "prev": 5076000000.0,
+        "share": 0.11276130326803835,
+        "yoy": 0.35066981875492514
+      }
+    ]
+  }
+}

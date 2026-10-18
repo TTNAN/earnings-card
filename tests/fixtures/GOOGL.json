@@ -1,0 +1,169 @@
+{
+  "ticker": "GOOGL",
+  "company": "Alphabet Inc.",
+  "period_start": "2026-04-01",
+  "period_end": "2026-06-30",
+  "filed": "2026-07-23",
+  "form": "10-Q",
+  "fiscal_label": "FY2026 Q2",
+  "revenue": 119796000000,
+  "revenue_yoy": 0.2423362508814867,
+  "gross_margin": 0.6164896991552306,
+  "gross_margin_prev": 0.5951487119923674,
+  "operating_income": 40770000000,
+  "operating_margin": 0.3403285585495342,
+  "net_income": 112193000000,
+  "net_income_yoy": 2.979039580082281,
+  "eps": 9.11,
+  "eps_yoy": 2.943722943722943,
+  "rnd": 18219000000,
+  "sga": null,
+  "tax": 26560000000,
+  "cost_of_revenue": 45943000000,
+  "ocf": 39069000000,
+  "capex": 44924000000,
+  "fcf": -5855000000,
+  "buyback": 0,
+  "dividends": null,
+  "cash": 55911000000,
+  "securities": 186563000000,
+  "trend": [
+    {
+      "end": "2024-09-30",
+      "revenue": 88268000000,
+      "net_income": 26301000000,
+      "gross_margin": 0.5867811664476368,
+      "operating_margin": 0.3231182308424344,
+      "net_margin": 0.2979675533602211,
+      "fcf": 17637000000
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 96469000000,
+      "net_income": 26536000000,
+      "gross_margin": 0.5790046543449191,
+      "operating_margin": 0.3210565051985612,
+      "net_margin": 0.2750728213208388,
+      "fcf": 24837000000
+    },
+    {
+      "end": "2025-03-31",
+      "revenue": 90234000000,
+      "net_income": 34540000000,
+      "gross_margin": 0.5970365937451515,
+      "operating_margin": 0.3391847862224882,
+      "net_margin": 0.38278254316554733,
+      "fcf": 18953000000
+    },
+    {
+      "end": "2025-06-30",
+      "revenue": 96428000000,
+      "net_income": 28196000000,
+      "gross_margin": 0.5951487119923674,
+      "operating_margin": 0.3242937735927324,
+      "net_margin": 0.2924046957315303,
+      "fcf": 5301000000
+    },
+    {
+      "end": "2025-09-30",
+      "revenue": 102346000000,
+      "net_income": 34979000000,
+      "gross_margin": 0.5957927031833193,
+      "operating_margin": 0.30512184159615424,
+      "net_margin": 0.34177202821800556,
+      "fcf": 24461000000
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 113829000000,
+      "net_income": 34455000000,
+      "gross_margin": 0.597931985697845,
+      "operating_margin": 0.315684052394381,
+      "net_margin": 0.3026908784228975,
+      "fcf": 24551000000
+    },
+    {
+      "end": "2026-03-31",
+      "revenue": 109896000000,
+      "net_income": 62578000000,
+      "gross_margin": 0.6244540292640315,
+      "operating_margin": 0.36121423891679405,
+      "net_margin": 0.5694292785906675,
+      "fcf": 10116000000
+    },
+    {
+      "end": "2026-06-30",
+      "revenue": 119796000000,
+      "net_income": 112193000000,
+      "gross_margin": 0.6164896991552306,
+      "operating_margin": 0.3403285585495342,
+      "net_margin": 0.9365337740826071,
+      "fcf": -5855000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-Q filed 2026-07-23",
+  "cik": 1652044,
+  "accn": "0001652044-26-000071",
+  "segments": {
+    "segment": [
+      {
+        "member": "goog:GoogleServicesMember",
+        "label": "Google Services",
+        "value": 94540000000.0,
+        "prev": 82543000000.0,
+        "share": 0.7891749307155498,
+        "yoy": 0.14534242758319907
+      },
+      {
+        "member": "goog:GoogleCloudMember",
+        "label": "Google Cloud",
+        "value": 24768000000.0,
+        "prev": 13624000000.0,
+        "share": 0.20675147751177,
+        "yoy": 0.817968291250734
+      },
+      {
+        "member": "us-gaap:AllOtherSegmentsMember",
+        "label": "Other Bets",
+        "value": 382000000.0,
+        "prev": 373000000.0,
+        "share": 0.003188754215499683,
+        "yoy": 0.024128686327077747
+      }
+    ],
+    "geo": [
+      {
+        "member": "country:US",
+        "label": "United States",
+        "value": 60846000000.0,
+        "prev": 46063000000.0,
+        "share": 0.5079134528698788,
+        "yoy": 0.32093003061025116
+      },
+      {
+        "member": "us-gaap:EMEAMember",
+        "label": "EMEA",
+        "value": 32501000000.0,
+        "prev": 28262000000.0,
+        "share": 0.2713028815653277,
+        "yoy": 0.14998938503998302
+      },
+      {
+        "member": "srt:AsiaPacificMember",
+        "label": "APAC",
+        "value": 19317000000.0,
+        "prev": 16480000000.0,
+        "share": 0.16124912350996695,
+        "yoy": 0.17214805825242718
+      },
+      {
+        "member": "goog:AmericasExcludingUnitedStatesMember",
+        "label": "Other Americas",
+        "value": 7026000000.0,
+        "prev": 5735000000.0,
+        "share": 0.058649704497646,
+        "yoy": 0.22510897994768964
+      }
+    ]
+  }
+}

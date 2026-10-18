@@ -1,0 +1,193 @@
+{
+  "ticker": "AAPL",
+  "company": "Apple Inc.",
+  "period_start": "2026-03-29",
+  "period_end": "2026-06-27",
+  "filed": "2026-07-31",
+  "form": "10-Q",
+  "fiscal_label": "FY2026 Q3",
+  "revenue": 109417000000,
+  "revenue_yoy": 0.1635650176528138,
+  "gross_margin": 0.500562069879452,
+  "gross_margin_prev": 0.4649070568718363,
+  "operating_income": 35695000000,
+  "operating_margin": 0.3262290137729969,
+  "net_income": 29789000000,
+  "net_income_yoy": 0.2711871639498165,
+  "eps": 2.02,
+  "eps_yoy": 0.286624203821656,
+  "rnd": 11729000000,
+  "sga": 7346000000,
+  "tax": 6478000000,
+  "cost_of_revenue": 54647000000,
+  "ocf": 34369000000,
+  "capex": 2455000000,
+  "fcf": 31914000000,
+  "buyback": 25105000000,
+  "dividends": 4035000000,
+  "cash": 39544000000,
+  "securities": 22855000000,
+  "trend": [
+    {
+      "end": "2024-09-28",
+      "revenue": 94930000000,
+      "net_income": 14736000000,
+      "gross_margin": 0.4622247972190035,
+      "operating_margin": 0.31171389444854103,
+      "net_margin": 0.15523016959865163,
+      "fcf": 23903000000
+    },
+    {
+      "end": "2024-12-28",
+      "revenue": 124300000000,
+      "net_income": 36330000000,
+      "gross_margin": 0.4688254223652454,
+      "operating_margin": 0.34458567980691873,
+      "net_margin": 0.2922767497988737,
+      "fcf": 26995000000
+    },
+    {
+      "end": "2025-03-29",
+      "revenue": 95359000000,
+      "net_income": 24780000000,
+      "gross_margin": 0.47050619238876246,
+      "operating_margin": 0.31029058610094484,
+      "net_margin": 0.25986010759341016,
+      "fcf": 20881000000
+    },
+    {
+      "end": "2025-06-28",
+      "revenue": 94036000000,
+      "net_income": 23434000000,
+      "gross_margin": 0.4649070568718363,
+      "operating_margin": 0.2999064188183249,
+      "net_margin": 0.24920243311072354,
+      "fcf": 24405000000
+    },
+    {
+      "end": "2025-09-27",
+      "revenue": 102466000000,
+      "net_income": 27466000000,
+      "gross_margin": 0.47177600374758455,
+      "operating_margin": 0.3164659496808698,
+      "net_margin": 0.2680498897195167,
+      "fcf": 26486000000
+    },
+    {
+      "end": "2025-12-27",
+      "revenue": 143756000000,
+      "net_income": 42097000000,
+      "gross_margin": 0.4815868555051615,
+      "operating_margin": 0.35373827875010433,
+      "net_margin": 0.292836472912435,
+      "fcf": 51552000000
+    },
+    {
+      "end": "2026-03-28",
+      "revenue": 111184000000,
+      "net_income": 29578000000,
+      "gross_margin": 0.4927057850050367,
+      "operating_margin": 0.32275327385235286,
+      "net_margin": 0.2660274859692042,
+      "fcf": 26731000000
+    },
+    {
+      "end": "2026-06-27",
+      "revenue": 109417000000,
+      "net_income": 29789000000,
+      "gross_margin": 0.500562069879452,
+      "operating_margin": 0.3262290137729969,
+      "net_margin": 0.2722520266503377,
+      "fcf": 31914000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-Q filed 2026-07-31",
+  "cik": 320193,
+  "accn": "0000320193-26-000020",
+  "segments": {
+    "product": [
+      {
+        "member": "aapl:IPhoneMember",
+        "label": "iPhone",
+        "value": 54252000000.0,
+        "prev": 44582000000.0,
+        "share": 0.49582788780536846,
+        "yoy": 0.21690368310080302
+      },
+      {
+        "member": "us-gaap:ServiceMember",
+        "label": "Services",
+        "value": 30739000000.0,
+        "prev": 27423000000.0,
+        "share": 0.2809344069020353,
+        "yoy": 0.12092039528862633
+      },
+      {
+        "member": "aapl:MacMember",
+        "label": "Mac",
+        "value": 10352000000.0,
+        "prev": 8046000000.0,
+        "share": 0.09461052670060412,
+        "yoy": 0.2866020382798906
+      },
+      {
+        "member": "aapl:WearablesHomeandAccessoriesMember",
+        "label": "Wearables, Home and Accessories",
+        "value": 7883000000.0,
+        "prev": 7404000000.0,
+        "share": 0.07204547739382362,
+        "yoy": 0.06469475958941114
+      },
+      {
+        "member": "aapl:IPadMember",
+        "label": "iPad",
+        "value": 6191000000.0,
+        "prev": 6581000000.0,
+        "share": 0.05658170119816847,
+        "yoy": -0.059261510408752466
+      }
+    ],
+    "segment": [
+      {
+        "member": "aapl:AmericasSegmentMember",
+        "label": "Americas",
+        "value": 45781000000.0,
+        "prev": 41198000000.0,
+        "share": 0.41840847400312564,
+        "yoy": 0.11124326423612797
+      },
+      {
+        "member": "aapl:EuropeSegmentMember",
+        "label": "Europe",
+        "value": 29395000000.0,
+        "prev": 24014000000.0,
+        "share": 0.26865112368279154,
+        "yoy": 0.22407762138752393
+      },
+      {
+        "member": "aapl:GreaterChinaSegmentMember",
+        "label": "Greater China",
+        "value": 18816000000.0,
+        "prev": 15369000000.0,
+        "share": 0.17196596506941333,
+        "yoy": 0.2242826468865899
+      },
+      {
+        "member": "aapl:RestOfAsiaPacificSegmentMember",
+        "label": "Rest of Asia Pacific",
+        "value": 8871000000.0,
+        "prev": 7673000000.0,
+        "share": 0.08107515285558917,
+        "yoy": 0.15613189104652678
+      },
+      {
+        "member": "aapl:JapanSegmentMember",
+        "label": "Japan",
+        "value": 6554000000.0,
+        "prev": 5782000000.0,
+        "share": 0.05989928438908031,
+        "yoy": 0.1335178139052231
+      }
+    ]
+  }
+}

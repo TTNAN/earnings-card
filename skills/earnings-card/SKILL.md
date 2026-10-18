@@ -5,7 +5,7 @@ description: Turn a US stock ticker into a beautiful, shareable earnings card (S
 
 # Earnings Card · 财报卡
 
-Make a set of editorial-quality cards (six portrait cards plus a landscape cover) for the latest reported quarter of a US-listed company. Data comes only from SEC EDGAR XBRL filings (free, no API key).
+Make a set of up to seven editorial-quality cards (up to six portrait cards plus a landscape cover) for the latest reported quarter of a US-listed company. Data comes only from SEC EDGAR XBRL filings (free, no API key).
 
 ## Steps
 
@@ -22,7 +22,7 @@ Make a set of editorial-quality cards (six portrait cards plus a landscape cover
    ```bash
    python3 scripts/render.py /tmp/NVDA.json --out ./NVDA-card --headline "营收同比翻倍，毛利率稳在 75%" --lang zh --png
    ```
-   This writes six cards: `-1-cover` (headline, revenue, 8-quarter bars, 4 key metrics), `-2-mix` (revenue by business and by region, read from the filing's own XBRL, with share and YoY; skipped when the filing has no breakdown), `-3-profit` (waterfall from revenue to net income), `-4-trend` (8 quarters of gross/operating/net margin + net income), `-5-cash` (operating cash flow, capex, free cash flow, buybacks, dividends, cash pile), `-6-guide` (management's next-quarter outlook, and last quarter's outlook vs what actually happened; only with `--guidance`), `-7-wide` (1600×900 for X / slides), plus one HTML page with all of them.
+   This writes up to seven cards (mix and guide are skipped when there is no data for them): `-1-cover` (headline, revenue, 8-quarter bars, 4 key metrics), `-2-mix` (revenue by business and by region, read from the filing's own XBRL, with share and YoY; skipped when the filing has no breakdown), `-3-profit` (waterfall from revenue to net income), `-4-trend` (8 quarters of gross/operating/net margin + net income), `-5-cash` (operating cash flow, capex, free cash flow, buybacks, dividends, cash pile), `-6-guide` (management's next-quarter outlook, and last quarter's outlook vs what actually happened; only with `--guidance`), `-7-wide` (1600×900 for X / slides), plus one HTML page with all of them.
    For Chinese cards, translate segment names: write a JSON map from the English labels in `segments` (e.g. `{"Data Center": "数据中心", "Greater China": "大中华区"}`) and pass `--labels map.json`. Keep product names like iPhone, AWS, Mac as they are.
    Guidance: run `python3 scripts/fetch_guidance.py data.json --out guidance_raw.json`. It prints the outlook text from this quarter's earnings release (outlook for next quarter) and the previous one (outlook for this quarter). Read it and write `guidance.json`:
    ```json

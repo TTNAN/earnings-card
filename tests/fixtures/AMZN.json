@@ -1,0 +1,193 @@
+{
+  "ticker": "AMZN",
+  "company": "AMAZON COM INC",
+  "period_start": "2026-04-01",
+  "period_end": "2026-06-30",
+  "filed": "2026-07-31",
+  "form": "10-Q",
+  "fiscal_label": "FY2026 Q2",
+  "revenue": 200606000000,
+  "revenue_yoy": 0.19620517346245125,
+  "gross_margin": null,
+  "gross_margin_prev": null,
+  "operating_income": 27461000000,
+  "operating_margin": 0.1368902226254449,
+  "net_income": 62647000000,
+  "net_income_yoy": 2.448964985685972,
+  "eps": 5.75,
+  "eps_yoy": 2.422619047619048,
+  "rnd": null,
+  "sga": null,
+  "tax": 18199000000,
+  "cost_of_revenue": null,
+  "ocf": 45387000000,
+  "capex": 54208000000,
+  "fcf": -8821000000,
+  "buyback": null,
+  "dividends": null,
+  "cash": 78213000000,
+  "securities": 44775000000,
+  "trend": [
+    {
+      "end": "2024-09-30",
+      "revenue": 158877000000,
+      "net_income": 15328000000,
+      "gross_margin": null,
+      "operating_margin": 0.1095879202150091,
+      "net_margin": 0.09647714898946984,
+      "fcf": 3351000000
+    },
+    {
+      "end": "2024-12-31",
+      "revenue": 187792000000,
+      "net_income": 20004000000,
+      "gross_margin": null,
+      "operating_margin": 0.1129068330919315,
+      "net_margin": 0.10652210956803272,
+      "fcf": 17802000000
+    },
+    {
+      "end": "2025-03-31",
+      "revenue": 155667000000,
+      "net_income": 17127000000,
+      "gross_margin": null,
+      "operating_margin": 0.11823315153500742,
+      "net_margin": 0.1100233190078822,
+      "fcf": -8004000000
+    },
+    {
+      "end": "2025-06-30",
+      "revenue": 167702000000,
+      "net_income": 18164000000,
+      "gross_margin": null,
+      "operating_margin": 0.11431586981669867,
+      "net_margin": 0.10831117100571251,
+      "fcf": 332000000
+    },
+    {
+      "end": "2025-09-30",
+      "revenue": 180169000000,
+      "net_income": 21187000000,
+      "gross_margin": null,
+      "operating_margin": 0.09669810011711227,
+      "net_margin": 0.11759514677885763,
+      "fcf": 430000000
+    },
+    {
+      "end": "2025-12-31",
+      "revenue": 213386000000,
+      "net_income": 21192000000,
+      "gross_margin": null,
+      "operating_margin": 0.11705079058607407,
+      "net_margin": 0.0993129821075422,
+      "fcf": 14937000000
+    },
+    {
+      "end": "2026-03-31",
+      "revenue": 181519000000,
+      "net_income": 30255000000,
+      "gross_margin": null,
+      "operating_margin": 0.13140222235688825,
+      "net_margin": 0.16667676661947234,
+      "fcf": -18171000000
+    },
+    {
+      "end": "2026-06-30",
+      "revenue": 200606000000,
+      "net_income": 62647000000,
+      "gross_margin": null,
+      "operating_margin": 0.1368902226254449,
+      "net_margin": 0.312288765041923,
+      "fcf": -8821000000
+    }
+  ],
+  "source": "SEC EDGAR · 10-Q filed 2026-07-31",
+  "cik": 1018724,
+  "accn": "0001018724-26-000026",
+  "segments": {
+    "product": [
+      {
+        "member": "amzn:OnlineStoresMember",
+        "label": "Online stores",
+        "value": 70432000000.0,
+        "prev": 61485000000.0,
+        "share": 0.3510961785789059,
+        "yoy": 0.14551516630072375
+      },
+      {
+        "member": "amzn:ThirdPartySellerServicesMember",
+        "label": "Third-party seller services",
+        "value": 46780000000.0,
+        "prev": 40348000000.0,
+        "share": 0.2331934239255057,
+        "yoy": 0.15941310597799146
+      },
+      {
+        "member": "amzn:AmazonWebServicesMember",
+        "label": "AWS",
+        "value": 42232000000.0,
+        "prev": 30873000000.0,
+        "share": 0.210522117982513,
+        "yoy": 0.3679266673144819
+      },
+      {
+        "member": "amzn:AdvertisingServicesMember",
+        "label": "Advertising services",
+        "value": 19809000000.0,
+        "prev": 15694000000.0,
+        "share": 0.09874580022531729,
+        "yoy": 0.2622021154581369
+      },
+      {
+        "member": "amzn:SubscriptionServicesMember",
+        "label": "Subscription services",
+        "value": 13730000000.0,
+        "prev": 12208000000.0,
+        "share": 0.06844261886483953,
+        "yoy": 0.12467234600262123
+      },
+      {
+        "member": "amzn:PhysicalStoresMember",
+        "label": "Physical stores",
+        "value": 5794000000.0,
+        "prev": 5595000000.0,
+        "share": 0.028882486067216336,
+        "yoy": 0.035567470956210906
+      },
+      {
+        "member": "amzn:OtherServicesMember",
+        "label": "Other",
+        "value": 1829000000.0,
+        "prev": 1499000000.0,
+        "share": 0.009117374355702222,
+        "yoy": 0.2201467645096731
+      }
+    ],
+    "segment": [
+      {
+        "member": "amzn:NorthAmericaSegmentMember",
+        "label": "North America",
+        "value": 116177000000.0,
+        "prev": 100068000000.0,
+        "share": 0.5791302353867781,
+        "yoy": 0.16098053323739858
+      },
+      {
+        "member": "amzn:AmazonWebServicesSegmentMember",
+        "label": "AWS",
+        "value": 42232000000.0,
+        "prev": 30873000000.0,
+        "share": 0.210522117982513,
+        "yoy": 0.3679266673144819
+      },
+      {
+        "member": "amzn:InternationalSegmentMember",
+        "label": "International",
+        "value": 42197000000.0,
+        "prev": 36761000000.0,
+        "share": 0.21034764663070896,
+        "yoy": 0.14787410570985554
+      }
+    ]
+  }
+}
