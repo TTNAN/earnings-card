@@ -42,7 +42,7 @@ input:not([type]):focus{border-color:var(--ink)}
 /* segmented controls: secondary, a soft track with the chosen option raised (solid dark is kept for Generate / ZIP) */
 .seg{display:flex;gap:2px;background:var(--soft);border-radius:10px;padding:3px}
 .seg button{flex:1;border:1px solid transparent;background:none;border-radius:8px;padding:6px 6px;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap;color:var(--soft-ink)}
-.seg button:hover:not(.on):not(:disabled){color:var(--ink);background:#ffffff80}
+.seg button:hover:not(.on):not(:disabled):not([aria-disabled=true]){color:var(--ink);background:#ffffff80}
 .seg button.on{background:var(--card);color:var(--ink);border-color:var(--accent);box-shadow:0 1px 2px #0000001f;font-weight:700}
 .seg.small{border-radius:999px}
 .seg.small button{padding:3px 10px;font-size:13px;border-radius:999px}
@@ -91,8 +91,8 @@ input:not([type]):focus{border-color:var(--ink)}
 .meta{font-size:14px;color:var(--mute)}
 .meta b{color:var(--ink);font-size:18px;margin-right:6px}
 .primary{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:10px 20px;font-weight:700;cursor:pointer}
-.primary:hover:not(:disabled){filter:brightness(.88)}
-.primary:disabled{opacity:.4;cursor:default}
+.primary:hover:not(:disabled):not([aria-disabled=true]){filter:brightness(.88)}
+.primary:disabled,.primary[aria-disabled=true]{opacity:.4;cursor:not-allowed;filter:none}
 
 .status{display:flex;align-items:center;gap:14px;padding:18px 20px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:18px}
 .status[hidden]{display:none}
@@ -116,8 +116,8 @@ input:not([type]):focus{border-color:var(--ink)}
 .tile figcaption>span:first-child{flex:1 1 120px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbtn{display:flex;gap:6px;flex:none}
 .tile figcaption button{border:1px solid #CFCFCA;background:var(--card);color:var(--ink);border-radius:999px;padding:4px 10px;white-space:nowrap;font-size:12.5px;font-weight:600;cursor:pointer}
-.tile figcaption button:hover:not(:disabled){border-color:var(--ink);background:#fff}
-.tile figcaption button:disabled{opacity:.4;cursor:default}
+.tile figcaption button:hover:not(:disabled):not([aria-disabled=true]){border-color:var(--ink);background:#fff}
+.tile figcaption button:disabled,.tile figcaption button[aria-disabled=true]{opacity:.4;cursor:not-allowed}
 .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--mute);font-size:13px}
 .foot code{background:var(--card);padding:1px 6px;border-radius:4px}
 
@@ -133,7 +133,7 @@ input:not([type]):focus{border-color:var(--ink)}
 .recent small,.ideas small{color:var(--mute);font-size:12px;width:auto}
 .ideas small{width:100%}
 .chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;cursor:pointer;line-height:1.4}
-.chip:hover{border-color:var(--ink)}
+.chip:hover:not(:disabled):not([aria-disabled=true]){border-color:var(--ink)}
 .chip.idea{font-weight:500;text-align:left;border-radius:10px;max-width:100%}
 .hint a{font-weight:700;color:var(--ink)}
 .hint.warn{color:var(--down)}
@@ -143,8 +143,8 @@ input:not([type]):focus{border-color:var(--ink)}
 .presets{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .presets select{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:7px 10px;font-size:14px}
 .ghost{border:1px solid #CFCFCA;background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:14px;white-space:nowrap}
-.ghost:hover:not(:disabled){border-color:var(--ink);background:#fff}
-.ghost:disabled{opacity:.4;cursor:default}
+.ghost:hover:not(:disabled):not([aria-disabled=true]){border-color:var(--ink);background:#fff}
+.ghost:disabled,.ghost[aria-disabled=true]{opacity:.4;cursor:not-allowed}
 
 /* preview bar, caption, progress, skeletons */
 .acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -187,7 +187,7 @@ input:not([type]):focus{border-color:var(--ink)}
   .bar .acts{width:100%}.bar .acts button{flex:1}
   .grid.r916 .tbtn button{padding:4px 8px}
 }
-.seg button:disabled{opacity:.35;cursor:not-allowed}
+.seg button:disabled,.seg button[aria-disabled=true]{opacity:.4;cursor:not-allowed}
 
 /* the three steps */
 .step{border:1px solid var(--line);border-radius:12px;background:#FFFFFF99;margin:0 0 10px}
@@ -258,3 +258,5 @@ input:not([type]):focus{border-color:var(--ink)}
 
 /* the preview stage: a lighter base than the panel, cards on white mats; on phones a little tighter */
 @media (max-width:900px){.preview{border-top:1px solid var(--line)}.tile .img{padding:7px;border-radius:11px}.tile .img>svg{border-radius:4px}}
+/* any disabled action button: visibly inert (dimmed, not-allowed cursor, no hover change) */
+button:disabled,button[aria-disabled=true]{opacity:.4;cursor:not-allowed}

@@ -119,7 +119,8 @@ const T = {
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 const qs = new URLSearchParams(location.search);
-const S = {ui: qs.get("ui") || localStorage.ecui || "zh", sort: qs.get("sort") || "sector", sec: qs.get("sector") || "", q: qs.get("q") || ""};
+const ssUI = (() => { try { return sessionStorage.ecui || ""; } catch (e) { return ""; } })();   // UI language picked in this tab
+const S = {ui: qs.get("ui") || ssUI || (/^zh/i.test(navigator.language || "zh") ? "zh" : "en"), sort: qs.get("sort") || "sector", sec: qs.get("sector") || "", q: qs.get("q") || ""};
 if (S.ui !== "en") S.ui = "zh";
 let rows = [];
 const tr = () => T[S.ui];
@@ -193,7 +194,7 @@ function applyUI() {
   $("#lede").textContent = t.lede(rows.length || 103);
   drawSecs(); draw();
 }
-document.querySelectorAll("#uilang button").forEach(b => b.onclick = () => { S.ui = b.dataset.v; localStorage.ecui = S.ui; applyUI(); });
+document.querySelectorAll("#uilang button").forEach(b => b.onclick = () => { S.ui = b.dataset.v; try { sessionStorage.ecui = S.ui; } catch (_) {} applyUI(); });
 document.querySelectorAll("th button").forEach(b => b.onclick = () => { S.sort = b.dataset.s; draw(); });
 $("#sort").onchange = e => { S.sort = e.target.value; draw(); };
 $("#q").value = S.q;

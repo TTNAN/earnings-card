@@ -81,7 +81,7 @@ const T = {
     r: {"4:5": "竖版 1080×1350 · 适合小红书 / 朋友圈", "1:1": "方图 1080×1080 · 通用（微博、Instagram）",
       "9:16": "长图 1080×1920 · 适合抖音 / 视频号 / Stories", "16:9": "横版 1920×1080 · 适合 X / 公众号头图 / PPT"},
     coverage: n => `已覆盖 ${n} 只美股，每晚自动更新。`, seeList: "查看列表",
-    unsupported: t => `不支持 ${t}`, unsupportedTail: n => `目前覆盖 ${n} 只股票。`, didYouMean: "你是不是要找：",
+    unsupported: t => `不支持 ${t}`, emptyTicker: "请输入股票代码", unsupportedTail: n => `目前覆盖 ${n} 只股票。`, didYouMean: "你是不是要找：",
     fullList: "查看全部支持的股票 →", recent: "最近：",
     partial: {no_quarter: "只有年报数据（季报暂缺）", no_annual: "只有季报数据（年报暂缺）", few_quarter: n => `只有最近 ${n} 个季度`,
       miss: (per, f) => `${per === "quarter" ? "最新季报" : "最新年报"}缺${f}`},
@@ -133,7 +133,7 @@ const T = {
     r: {"4:5": "Portrait 1080×1350 · Instagram, Xiaohongshu, WeChat Moments", "1:1": "Square 1080×1080 · works everywhere",
       "9:16": "Story 1080×1920 · TikTok/Douyin, Stories, Reels", "16:9": "Landscape 1920×1080 · X, article headers, slides"},
     coverage: n => `${n} US stocks covered, refreshed nightly.`, seeList: "See the list",
-    unsupported: t => `${t} isn't supported`, unsupportedTail: n => `${n} tickers are covered.`, didYouMean: "Did you mean:",
+    unsupported: t => `${t} isn't supported`, emptyTicker: "Type a ticker first", unsupportedTail: n => `${n} tickers are covered.`, didYouMean: "Did you mean:",
     fullList: "See every supported ticker →", recent: "Recent:",
     partial: {no_quarter: "annual data only (no quarterly)", no_annual: "quarterly data only (no annual)", few_quarter: n => `only the last ${n} quarters`,
       miss: (per, f) => `latest ${per === "quarter" ? "quarter" : "year"} has no ${f}`},
@@ -157,13 +157,19 @@ const T = {
 // ---------- storage ----------
 const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+// Per-tab state (the last session's settings, the UI language picked in this tab): a new tab or a first visit starts fresh.
+const ssGet = k => { try { return JSON.parse(sessionStorage.getItem(k) || "null"); } catch (e) { return null; } };
+const ssSet = (k, v) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const ssStr = k => { try { return sessionStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const browserUI = () => /^zh/i.test(navigator.language || "") ? "zh" : ((navigator.language || "") ? "en" : "zh");
 
 // ---------- state ----------
 // Settings come from the URL; a bare URL (or one with only ?t=, as the ticker list links) starts from the
-// last settings this browser used. A link with more than t= is someone's exact setup: use it as it is.
+// last settings used in this tab (sessionStorage, so a new tab or first visit starts from the defaults). A link with more than t= is someone's exact setup: use it as it is.
 const $ = s => document.querySelector(s);
 const urlQ = new URLSearchParams(location.search);
-const last = lsGet("ecLast");
+try { localStorage.removeItem("ecLast"); localStorage.removeItem("ecui"); } catch (e) {}   // older builds restored these across tabs
+const last = ssGet("ecLast");
 const onlyTicker = [...urlQ.keys()].every(k => k === "t" || k === "ui");
 const q = (() => {
   if (!onlyTicker || !last || !last.qs) return urlQ;
@@ -174,7 +180,7 @@ const q = (() => {
 })();
 const useLastColors = onlyTicker && last;
 const S = {
-  ui: urlQ.get("ui") || localStorage.ecui || "zh",
+  ui: ["zh", "en"].includes(urlQ.get("ui")) ? urlQ.get("ui") : (["zh", "en"].includes(ssStr("ecui")) ? ssStr("ecui") : browserUI()),
   ticker: (q.get("t") || "NVDA").toUpperCase().trim(),
   period: q.get("p") === "annual" ? "annual" : "quarter",
   ratio: ["4:5", "1:1", "9:16", "16:9"].includes(q.get("r")) ? q.get("r") : "4:5",
@@ -226,6 +232,9 @@ function toast(msg) {
 function applyUI() {
   const t = tr();
   document.documentElement.lang = S.ui === "zh" ? "zh-CN" : "en";
+  document.title = "earnings-card · " + t.brand;
+  document.querySelectorAll('meta[property="og:title"],meta[name="twitter:title"]').forEach(m => m.setAttribute("content", document.title));
+  const ogl = document.querySelector('meta[property="og:locale"]'); if (ogl) ogl.setAttribute("content", S.ui === "zh" ? "zh_CN" : "en_US");
   document.querySelectorAll("[data-i]").forEach(el => {
     const v = t[el.dataset.i];
     if (typeof v === "string") (el.dataset.i === "foot" ? el.innerHTML = v : el.textContent = v);
@@ -245,6 +254,7 @@ function applyUI() {
   drawQuick();
   drawSummaries();
   if ($("#tkerr").dataset.t) showTkErr($("#tkerr").dataset.t);
+  else if ($("#tkerr").dataset.empty) showEmptyErr();
   setSeg("#uilang", S.ui);
   if (current) $("#meta").innerHTML = metaHTML();
   if (rendered.length) drawTiles(rendered.map(c => c.name), rendered);
@@ -375,16 +385,22 @@ function similar(raw) {
   return hits.concat(near).slice(0, 3);
 }
 function showTkErr(raw) {
+  raw = String(raw == null ? "" : raw).trim();
+  if (!raw) { showEmptyErr(); return; }   // never "isn't supported" without the ticker in it
   const t = tr(), el = $("#tkerr"), sim = similar(raw);
-  el.dataset.t = raw;
-  el.innerHTML = `<b>${esc(t.unsupported(raw.trim().toUpperCase() || raw))}</b>。${esc(t.unsupportedTail(tickers.length))}` +
+  el.dataset.t = raw; delete el.dataset.empty;
+  el.innerHTML = `<b>${esc(t.unsupported(raw.toUpperCase()))}</b>。${esc(t.unsupportedTail(tickers.length))}` +
     (sim.length ? `<br>${esc(t.didYouMean)} ${sim.map(s => `<button class="chip" data-t="${esc(s)}">${esc(s)}</button>`).join(" ")}` : "") +
     `<br><a href="${listURL()}">${esc(t.fullList)}</a>`;
   if (S.ui === "en") el.innerHTML = el.innerHTML.replace("</b>。", "</b>. ");
   el.hidden = false;
   el.querySelectorAll("button[data-t]").forEach(b => b.onclick = () => pickTicker(b.dataset.t));
 }
-function hideTkErr() { const el = $("#tkerr"); el.hidden = true; delete el.dataset.t; }
+function showEmptyErr() {
+  const el = $("#tkerr"); delete el.dataset.t; el.dataset.empty = "1";
+  el.innerHTML = `<b>${esc(tr().emptyTicker)}</b>`; el.hidden = false;
+}
+function hideTkErr() { const el = $("#tkerr"); el.hidden = true; delete el.dataset.t; delete el.dataset.empty; }
 function drawTickerNote() {
   const t = tr(), el = $("#tknote"), c = cov[S.ticker];
   if (!c || !c.partial || !c.partial.length || $("#tkerr").dataset.t) { el.hidden = true; return; }
@@ -411,8 +427,11 @@ function pushRecent(tk) {
 // Switch to a ticker (from the list, Enter, the Generate button or a chip). Unknown ones get an inline error;
 // the cards on screen stay as they are, nothing falls back to another stock.
 function pickTicker(raw, force) {
-  const inp = $("#ticker"), tk = resolveTicker(raw);
+  const inp = $("#ticker");
+  raw = String(raw == null ? "" : raw).trim();
   $("#sugg").hidden = true; inp.setAttribute("aria-expanded", "false");
+  if (!raw) { showEmptyErr(); drawTickerNote(); inp.value = ""; inp.focus(); return; }   // nothing typed: say so, don't regenerate the last stock
+  const tk = resolveTicker(raw);
   if (!tk) { showTkErr(raw); drawTickerNote(); return; }
   hideTkErr();
   inp.value = tk;
@@ -433,7 +452,7 @@ function setupSearch() {
     }).join("");
     ul.hidden = !hits.length; inp.setAttribute("aria-expanded", String(!ul.hidden));
   };
-  inp.addEventListener("input", () => { show(); if (!inp.value.trim()) hideTkErr(); });
+  inp.addEventListener("input", () => { show(); if (!inp.value.trim() || $("#tkerr").dataset.empty) hideTkErr(); });
   inp.addEventListener("focus", () => { inp.select(); });
   inp.addEventListener("keydown", e => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -446,8 +465,8 @@ function setupSearch() {
     } else if (e.key === "Escape") { ul.hidden = true; inp.setAttribute("aria-expanded", "false"); }
   });
   ul.addEventListener("mousedown", e => { const li = e.target.closest("li"); if (li) { e.preventDefault(); pickTicker(li.dataset.t); inp.blur(); } });
-  inp.addEventListener("blur", () => setTimeout(() => { ul.hidden = true; if (!inp.value.trim()) inp.value = S.ticker; }, 150));
-  $("#go").onclick = () => pickTicker(inp.value || S.ticker, true);
+  inp.addEventListener("blur", () => setTimeout(() => { ul.hidden = true; if (!inp.value.trim() && !$("#tkerr").dataset.empty) inp.value = S.ticker; }, 150));
+  $("#go").onclick = () => pickTicker(inp.value, true);
 }
 
 // ---------- data ----------
@@ -1070,7 +1089,8 @@ function saveURL() {
 function saveLast() {
   if (!current) return;
   const p = new URLSearchParams(location.search); p.delete("ui"); p.set("lang", S.lang);
-  lsSet("ecLast", {qs: p.toString(), colors: S.colors, colorOn: S.colorOn, updown: S.updown});
+  try { sessionStorage.ecui = S.ui; } catch (e) {}   // this tab keeps its UI language too
+  ssSet("ecLast", {qs: p.toString(), colors: S.colors, colorOn: S.colorOn, updown: S.updown});
 }
 
 // ---------- boot ----------
@@ -1110,7 +1130,7 @@ async function boot() {
   bindSeg("#font", "font");
   bindSeg("#lang", "lang", () => { pickPeriod(); });
   document.querySelectorAll("#uilang button").forEach(b => b.onclick = () => {
-    const prev = S.ui; S.ui = b.dataset.v; localStorage.ecui = S.ui;
+    const prev = S.ui; S.ui = b.dataset.v; try { sessionStorage.ecui = S.ui; } catch (_) {}
     if (S.lang === prev) { S.lang = S.ui; setSeg("#lang", S.lang); }
     applyUI(); schedule(0);
   });
