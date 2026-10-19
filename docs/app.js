@@ -1083,6 +1083,10 @@ function saveURL() {
   if (S.headline) p.set("h", S.headline);
   const on = CARD_ORDER.filter(c => !S.off.has(c));
   if (on.join(",") !== CARD_ORDER.filter(c => !DEFAULT_OFF.includes(c)).join(",")) p.set("c", on.join(","));
+  // A bare URL showing the untouched default (NVDA sample, browser language) stays bare: a fresh visit is a clean homepage.
+  const bare = !location.search || location.search === "?";
+  const keys = [...p.keys()];
+  if (bare && p.get("t") === "NVDA" && keys.every(k => k === "t" || (k === "ui" && S.ui === browserUI()))) return;
   history.replaceState(null, "", "?" + p.toString());
 }
 // The settings to come back to next visit (colours aren't in the URL, so they live here).
