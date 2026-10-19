@@ -146,7 +146,8 @@ class Contrast(unittest.TestCase):
         self.assertEqual(t["a2"], "#00AA88")
         self.assertEqual((t["up"], t["down"]), (base["down"], base["up"]))
         out = json.loads(R.web_render(json.dumps(block("NVDA")), json.dumps({"cards": ["trend"], "a2": "#00AA88"})))
-        self.assertIn("#00AA88", out[0]["svg"])
+        # the chosen accent is used, held to 3:1 on the page (a line + its large end label): same hue, a step darker
+        self.assertIn(R.readable("#00AA88", R.surfaces(base), R.NEED_MARK), out[0]["svg"])
 
 
 class OneAtATime(unittest.TestCase):

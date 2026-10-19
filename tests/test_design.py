@@ -100,7 +100,7 @@ class Charts(unittest.TestCase):
     def test_waterfall_layers(self):
         t = R.THEMES["light"]
         svg = R.card_profit(self.d, R.L["en"], "en", t)
-        self.assertIn(f'fill="{t["cool"]}"', svg)     # costs: cool grey
+        self.assertIn(f'fill="{R.fit_contrast(t)["cool"]}"', svg)     # costs: cool grey (held to 3:1 on the page)
         self.assertIn(f'fill="{t["a2"]}"', svg)       # net income: the warm accent
         self.assertIn(f'fill="{t["up"]}"', svg)       # the positive other-income step
 
@@ -117,7 +117,7 @@ class TableRows(unittest.TestCase):
             (_, svg), = R.render_cards(d, "en", "light", ["mix"], ratio)
             with self.subTest(ratio=ratio):
                 amount = max(int(m) for m in re.findall(r'data-fig="[^"]+"[^>]*font-size="(\d+)"', svg))
-                share = int(re.search(r'font-size="(\d+)" font-weight="400" fill="' + t["sub"] + r'"[^>]*><tspan[^>]*>\d+% share<', svg).group(1))
+                share = int(re.search(r'font-size="(\d+)" font-weight="400" fill="' + t["sub"] + r'"[^>]*><tspan[^>]*>\d+% of revenue<', svg).group(1))
                 self.assertGreaterEqual(amount, share * 1.6)
                 self.assertRegex(svg, r'font-weight="600" fill="%s"[^>]*><tspan[^>]*>\+' % t["up"])   # YoY: lighter mark
 

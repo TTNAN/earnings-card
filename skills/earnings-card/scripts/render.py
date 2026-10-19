@@ -157,6 +157,7 @@ def build_style(custom, base_dir=None):
         mime = mimetypes.guess_type(path)[0] or "image/png"
         custom["avatar"] = f"data:{mime};base64," + base64.b64encode(open(path, "rb").read()).decode()
     t.update(custom)
+    t.pop("_fit", None)
     return t
 
 
@@ -200,12 +201,126 @@ def ensure_contrast(fg, bg, need=4.5, toward=None):
     return toward
 
 
+def _lab(c):
+    """sRGB hex -> CIE L*a*b* (D65)."""
+    lin = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in (x / 255 for x in _hex(c))]
+    X = (0.4124 * lin[0] + 0.3576 * lin[1] + 0.1805 * lin[2]) / 0.95047
+    Y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    Z = (0.0193 * lin[0] + 0.1192 * lin[1] + 0.9505 * lin[2]) / 1.08883
+    f = lambda t: t ** (1 / 3) if t > 0.008856 else 7.787 * t + 16 / 116
+    fx, fy, fz = f(X), f(Y), f(Z)
+    return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
+
+
+def _de(x, y):
+    """CIE76 colour difference."""
+    return sum((p - q) ** 2 for p, q in zip(_lab(x), _lab(y))) ** 0.5
+
+
+def _from_lab(L, a, b):
+    fy = (L + 16) / 116
+    fx, fz = fy + a / 500, fy - b / 200
+    g = lambda t: t ** 3 if t ** 3 > 0.008856 else (t - 16 / 116) / 7.787
+    X, Y, Z = g(fx) * 0.95047, g(fy), g(fz) * 1.08883
+    lin = (3.2406 * X - 1.5372 * Y - 0.4986 * Z, -0.9689 * X + 1.8758 * Y + 0.0415 * Z, 0.0557 * X - 0.2040 * Y + 1.0570 * Z)
+    srgb = [12.92 * v if v <= 0.0031308 else 1.055 * v ** (1 / 2.4) - 0.055 for v in lin]
+    return "#" + "".join(f"{round(min(1, max(0, v)) * 255):02X}" for v in srgb)
+
+
+def _shade(c, bgs, need, lighter):
+    """c with its perceptual lightness (CIE L*) moved toward white (lighter) or black, its hue and chroma
+    (a*, b*) kept, just far enough to reach `need` against every colour in bgs: a pastel darkens into a muted
+    tone of the same hue, a dark green on black brightens into a readable green. Falls back to white / black."""
+    L, a, b = _lab(c)
+    for i in range(1, 101):
+        L2 = min(100.0, L + i) if lighter else max(0.0, L - i)
+        out = _from_lab(L2, a, b)
+        if min(contrast(out, bg) for bg in bgs) >= need:
+            return out
+        if L2 in (0.0, 100.0):
+            break
+    return "#FFFFFF" if lighter else "#000000"
+
+
+def readable(fg, bgs, need=4.5):
+    """THE contrast rule: fg unchanged when it reaches `need` (WCAG ratio) against every colour in bgs, else
+    one step lighter on dark backgrounds / darker on light ones (same hue and chroma, CIE L*) until it does.
+    Direction: whichever of white / black stands out more against the worst background."""
+    bgs = [bgs] if isinstance(bgs, str) else list(bgs)
+    if min(contrast(fg, bg) for bg in bgs) >= need:
+        return fg
+    lighter = min(contrast("#FFFFFF", bg) for bg in bgs) >= min(contrast("#000000", bg) for bg in bgs)
+    return _shade(fg, bgs, need, lighter)
+
+
+def ink_on(behind, prefer, alt, need=4.5):
+    """Label colour for text sitting on `behind` (a page, a box, or a bar fill when the label is inside a bar):
+    `prefer` if it reads, else whichever of prefer / alt has more contrast there (light on dark, dark on light),
+    pushed to `need`."""
+    bgs = [behind] if isinstance(behind, str) else list(behind)
+    worst = lambda c_: min(contrast(c_, bg) for bg in bgs)
+    if worst(prefer) >= need:
+        return prefer
+    if worst(prefer) < 2:   # nearly the same tone as what's behind (grey on a grey bar): the opposite colour
+        prefer = max((prefer, alt), key=worst)
+    return readable(prefer, bgs, need)   # else the same colour, a step lighter / darker
+
+
+def surfaces(t):
+    """Every colour text and marks sit on: the page (each stop of a gradient page) and the metric boxes
+    (composited over the page when translucent)."""
+    pages = [t["bg"]] + list(t.get("bg_grad") or [])
+    a = t.get("card_opacity", 1)
+    return pages + [_mix(p, t["card"], a) for p in pages]
+
+
+# WCAG targets: body text 4.5:1; data marks (bars, lines) and large text 3:1; fills whose value is printed
+# anyway (segment shares, guidance ranges) 1.5:1 so they don't vanish; small chart value labels 7:1.
+NEED_TEXT, NEED_MARK, NEED_SEG, NEED_LABEL = 4.5, 3.0, 1.5, 7.0
+
+
+def fit_contrast(t):
+    """Make a style legible on its own background, whatever colours it came with (a built-in style, a custom
+    JSON, or bg / ink / hi / red-up overrides from recolor()). Colours that already pass are left alone, so a
+    style keeps its identity; the rest move in lightness only (CIE L*, hue and chroma kept): semantic up / down and the other text
+    colours to 4.5:1 against the page and the boxes, bars / series / highlight to 3:1, segment fills to 1.5:1.
+    Idempotent; render_cards() applies it."""
+    if t.get("_fit"):
+        return t
+    t = dict(t)
+    surf = surfaces(t)
+    for k in ("ink", "sub", "up", "down"):
+        t[k] = readable(t[k], surf, NEED_TEXT)
+    for k in ("a1", "a2", "a3", "hi", "bar", "cool", "profit"):   # series lines (+ their large end labels), bars
+        if t.get(k):
+            t[k] = readable(t[k], surf, NEED_MARK)
+    hi = t.get("hi", t["ink"])   # the latest bar must stand apart from the quiet ones (CIE76 dE > 25)
+    need = NEED_MARK
+    while _de(hi, t["bar"]) <= 25 and need < 15:
+        need += 0.25
+        hi = readable(hi, surf, need)
+    if "hi" in t or hi != t["ink"]:
+        t["hi"] = hi
+    if t.get("band"):   # the guidance range band sits on a faint track
+        t["band"] = readable(t["band"], surf + [t["faint"]], NEED_SEG)
+    if t.get("palette"):
+        t["palette"] = [readable(p, surf, NEED_SEG) for p in t["palette"]]
+    t["_fit"] = True
+    return t
+
+
+def mark(t, col):
+    """A colour derived at draw time (a lighter bar, a blend) held to the data-mark contrast."""
+    return readable(col, surfaces(t), NEED_MARK)
+
+
 def recolor(t, bg=None, ink=None, hi=None, a2=None, updown=None):
     """Swap a style's page / text / highlight colours and re-derive the tones that depend on them.
 
     a2: second accent (operating-margin line, cost bars, 2nd segment colour).
     updown="cn": red for up, green for down (the convention on Chinese markets)."""
     t = dict(t)
+    t.pop("_fit", None)
     if bg or ink:
         if bg:   # a custom page colour replaces a gradient page
             t.pop("bg_grad", None)
@@ -791,6 +906,12 @@ def cell_delta(c, x, y, delta, size, max_w=None, anchor="start"):
     change(c, x, y, v, good, sz, lab, anchor)
 
 
+# Data marks are tagged so tools/check_contrast.py can find them: MARK = a bar / line that carries a value
+# (needs 3:1 against what's behind it), SEG = a fill whose value is also printed as text (segment shares,
+# guidance range bands: 1.5:1 so it doesn't vanish).
+MARK, SEG = 'data-mark="data"', 'data-mark="seg"'
+
+
 # ---------- table rows: a big value with small secondary notes (mix, waterfall) ----------
 META_GAP = 0.9   # em between the parts of a secondary line
 
@@ -812,6 +933,21 @@ def meta(c, x_right, y, parts, size):
         else:
             x += change(c, x, y, p[1], p[2], size, p[3], weight=600)
         x += size * META_GAP
+
+
+META_VARIANTS = ((True, True), (True, False), (False, True), (False, False))   # (long share, YoY label), richest first
+
+
+def meta_parts(share, share_long, yoy, yoy_label, variant):
+    """One row's secondary line in one META_VARIANTS shape. A table picks ONE shape for all its rows
+    (the richest that fits every row) so the share reads the same way on each line."""
+    long_, lab = variant
+    parts = []
+    if share is not None:
+        parts.append(("txt", (share_long or share) if long_ else share))
+    if yoy is not None:
+        parts.append(("chg", pct(yoy), yoy >= 0, yoy_label if lab else None))
+    return parts
 
 
 def meta_options(share, share_long, yoy, yoy_label):
@@ -904,16 +1040,17 @@ def bar_colors(t, n):
     out = [t["bar"]] * n
     for k, w in ((3, 0.12), (2, 0.27)):
         if n >= k:
-            out[n - k] = _mix(t["bar"], hi, w)
+            out[n - k] = mark(t, _mix(t["bar"], hi, w))
     if n:
         out[-1] = hi
     return out
 
 
-def bars(c, x, y, w, h, vals, labels, lang, highlight_last=True, label_fn=None):
+def bars(c, x, y, w, h, vals, labels, lang, highlight_last=True, label_fn=None, behind=None):
     """Vertical bars, FT-style restraint: values printed on the first and the latest bar only, period labels
-    under those two only, a hairline baseline; supports negatives."""
+    under those two only, a hairline baseline; supports negatives. behind: what the chart sits on (page bg)."""
     t = c.t
+    behind = behind or [t["bg"]] + list(t.get("bg_grad") or [])
     label_fn = label_fn or (lambda v: unit(v, lang))
     vs = [v or 0 for v in vals]
     hi, lo = max(max(vs), 0), min(min(vs), 0)
@@ -931,22 +1068,24 @@ def bars(c, x, y, w, h, vals, labels, lang, highlight_last=True, label_fn=None):
         last = highlight_last and i == n - 1
         col = t["down"] if v < 0 else cols[i]
         if v < 0 and not last:
-            col = _mix(t["down"], t["bg"], 0.35)
+            col = mark(t, _mix(t["down"], t["bg"], 0.35))
         by = zero - bh if v >= 0 else zero
         if last and v >= 0 and bh > 12:
             if _lum(t["bg"]) > 0.4:   # paper: the latest bar lifts off the page on a soft offset shadow
                 sd = min(5, gap * 0.4)
-                c.rect(bx + sd, by + sd, bw, bh - sd, t["ink"], 2, 'fill-opacity="0.16"')
+                c.rect(bx + sd, by + sd, bw, bh - sd, t["ink"], 2, 'fill-opacity="0.16" data-shadow="1"')
             else:                     # dark pages: a hairline frame a few px out instead (a shadow wouldn't show)
                 o = min(4, gap * 0.35)
                 c.rect(bx - o, by - o, bw + 2 * o, bh + o, "none", 3,
                        f'stroke="{col}" stroke-width="1" stroke-opacity="0.45"')
-        c.rect(bx, by, bw, bh, col, 2)
+        c.rect(bx, by, bw, bh, col, 2, MARK)
         if i in (0, n - 1):
             ly = by - 12 if v >= 0 else zero - 12
             fs = 20 if last else 17
-            c.add(text(bx + bw / 2, ly, label_fn(vals[i]), fs, t["ink"] if last else t["sub"], 800 if last else BODY_W, "middle"))
-            c.add(text(bx + bw / 2, y + h + 30, labels[i], 17, t["ink"] if last else t["sub"], 600 if last else BODY_W, "middle"))
+            # value / period labels sit on the page (behind): colour picked from its luminance, held to 7:1
+            vcol = ink_on(behind, t["ink"] if last else t["sub"], t["ink"], NEED_LABEL)
+            c.add(text(bx + bw / 2, ly, label_fn(vals[i]), fs, vcol, 800 if last else BODY_W, "middle"))
+            c.add(text(bx + bw / 2, y + h + 30, labels[i], 17, vcol, 600 if last else BODY_W, "middle"))
     c.rect(x, zero - 0.5, w, 1, t["sub"] if lo < 0 else t["faint"])
 
 
@@ -1123,14 +1262,14 @@ def card_profit(d, l, lang, t, size=None):
     scale = bw_max / max(rev, 1)
     level = 0
     prof = t.get("profit", t["a2"])
-    cool = t.get("cool") or _mix(_mix(t["bg"], t["ink"], 0.3), "#8A949E", 0.35)   # a neutral, slightly blue grey
+    cool = mark(t, t.get("cool") or _mix(_mix(t["bg"], t["ink"], 0.3), "#8A949E", 0.35))   # a neutral, slightly blue grey
     for i, (lab, v, kind) in enumerate(rows):
         ry = y + i * rh
         total = kind == "total"
         if total:
             x0, x1 = bx0, bx0 + max(v, 0) * scale
             # revenue in ink; profit lines in the warm accent, deepening toward the bottom line
-            col = t["ink"] if lab == l["rev"] else (prof if lab == l["ni"] else _mix(prof, t["bg"], 0.3 if lab == l["gp"] else 0.15))
+            col = t["ink"] if lab == l["rev"] else (prof if lab == l["ni"] else mark(t, _mix(prof, t["bg"], 0.3 if lab == l["gp"] else 0.15)))
             level = v
         else:
             new = level + v
@@ -1141,7 +1280,7 @@ def card_profit(d, l, lang, t, size=None):
         a_ = asz[0 if total else 1]
         base = round(ry + rh / 2 + a_ * 0.36 - (0 if tight else msz * 0.6 + 6))
         bh = 0.6 if tight else 0.64
-        c.rect(x0, ry + rh * (1 - bh) / 2, max(x1 - x0, 3), rh * bh, col, 2)
+        c.rect(x0, ry + rh * (1 - bh) / 2, max(x1 - x0, 3), rh * bh, col, 2, MARK)
         c.add(text(P, round(ry + rh / 2 + lsz[0] * 0.36), lab, lsz[0] if total else lsz[1],
                    t["ink"] if total else t["sub"], 700 if total else BODY_W))
         row_value(c, W - P, base, vs, a_, parts, msz, not tight, HERO_W if total else 800)
@@ -1176,7 +1315,7 @@ def line_chart(c, x, y, w, h, series, labels, lang):
         if len(pts) < 2:
             continue
         sw = 6 if k == 0 else 5.5
-        c.add(f'<polyline points="{" ".join(f"{a:.1f},{b:.1f}" for a, b in pts)}" fill="none" stroke="{col}" '
+        c.add(f'<polyline {MARK} points="{" ".join(f"{a:.1f},{b:.1f}" for a, b in pts)}" fill="none" stroke="{col}" '
               f'stroke-width="{sw}" stroke-linejoin="round" stroke-linecap="round"/>')
         a, b = pts[-1]
         c.add(f'<circle cx="{a:.1f}" cy="{b:.1f}" r="12" fill="{col}"/>')
@@ -1389,17 +1528,35 @@ def card_mix(d, l, lang, t, labels=None, size=None):
     asize = 36 if stacked else (32 if rh >= 62 else 28)
     msize = 17 if stacked else 16
     y0 = y
+    cw_ = (W - 2 * P - 80) // 2 if side else W - 2 * P
+
+    def rowinfo(it):
+        """(display name, amount, meta args): share as "51% 占营收" / "51% of revenue", the profit card's wording."""
+        share = f'{(it.get("share") or 0)*100:.0f}%' if it.get("share") is not None else None
+        return (labels.get(it["label"], it["label"]), money(it["value"], lang),
+                (share, share and f'{share} {l["of_rev"]}', it.get("yoy"), l["yoy"]))
+
+    def shown(gi, items):
+        if len(items) <= max_rows[gi]:
+            return list(items)
+        rest = items[max_rows[gi] - 1:]
+        return list(items[:max_rows[gi] - 1]) + [{"label": l["other_seg"], "value": sum(i["value"] for i in rest),
+                                                 "share": sum(i.get("share") or 0 for i in rest), "yoy": None}]
+
+    # one secondary-line shape for every row of the card: the richest that leaves each row's name room
+    all_rows = [rowinfo(it) for gi, (_, items) in enumerate(groups) for it in shown(gi, items)]
+    variant = META_VARIANTS[-1]
+    for v in META_VARIANTS:
+        if all(cw_ - 28 - row_value_width(mv, asize, meta_parts(*args, v), msize, stacked) - 28
+               >= min(measure(name, 24, BODY_W), cw_ * 0.42) for name, mv, args in all_rows):
+            variant = v
+            break
     for gi, (title, items) in enumerate(groups):
         cw = (W - 2 * P - 80) // 2 if side else W - 2 * P
         x0 = P + gi * (cw + 80) if side else P
         if side:
             y = y0
-        items = list(items)
-        if len(items) > max_rows[gi]:
-            keep = items[:max_rows[gi] - 1]
-            rest = items[max_rows[gi] - 1:]
-            items = keep + [{"label": l["other_seg"], "value": sum(i["value"] for i in rest),
-                             "share": sum(i.get("share") or 0 for i in rest), "yoy": None}]
+        items = shown(gi, items)
         c.add(text(x0, y + 6, title, 24, t["ink"], 700))
         # 100% stacked bar
         x = x0
@@ -1407,24 +1564,17 @@ def card_mix(d, l, lang, t, labels=None, size=None):
         by = y + 26
         for k, it in enumerate(items):
             w = bw * (it.get("share") or 0)
-            c.rect(x, by, max(w - 3, 1), 30, pal[k % len(pal)], 2)
+            c.rect(x, by, max(w - 3, 1), 30, pal[k % len(pal)], 2, SEG)
             x += w
         y = by + 30 + 14
         for k, it in enumerate(items):
             rt = y + k * rh
             base = round(rt + rh / 2 + asize * 0.36 - (msize * 0.6 + 6 if stacked else 0))
-            name = labels.get(it["label"], it["label"])
-            mv = money(it["value"], lang)
-            share = f'{(it.get("share") or 0)*100:.0f}%' if it.get("share") is not None else None
-            share_long = share and (f'{l["share"]} {share}' if lang == "zh" else f'{share} {l["share"]}')
-            opts = meta_options(share, share_long, it.get("yoy"), l["yoy"])
-            want = min(measure(name, 24, BODY_W), cw * 0.42)
-            for parts in opts:   # drop the labels before squeezing the segment name
-                vw = row_value_width(mv, asize, parts, msize, stacked)
-                if cw - 28 - vw - 28 >= want:
-                    break
+            name, mv, args = rowinfo(it)
+            parts = meta_parts(*args, variant)
+            vw = row_value_width(mv, asize, parts, msize, stacked)
             row_value(c, x0 + cw, base, mv, asize, parts, msize, stacked)
-            c.rect(x0, base - 15, 14, 14, pal[k % len(pal)], 3)
+            c.rect(x0, base - 15, 14, 14, pal[k % len(pal)], 3, SEG)
             c.add(text(x0 + 28, base, clip(name, cw - 28 - vw - 28, 24, BODY_W), 24, t["ink"], BODY_W))
             c.rect(x0, rt + rh - 1, cw, 1, t["faint"])
         y += len(items) * rh + 46
@@ -1534,7 +1684,7 @@ def card_guide(d, l, lang, t, g, size=None):
             bx0, bx1 = sx(lo), sx(hi)
             c.rect(x0 + 260, y + 30, cw - 300, 4, t["faint"], 2)
             band = t.get("band", t["bar"])
-            c.rect(bx0, y + 18, max(bx1 - bx0, 6), 28, band, 6)
+            c.rect(bx0, y + 18, max(bx1 - bx0, 6), 28, band, 6, SEG)
             ax = sx(act)
             c.add(f'<circle cx="{ax:.1f}" cy="{y+32}" r="11" fill="{t["ink"]}"/>')
             c.add(text(ax, y + 2, f'{l["actual"]} {_gfmt(act, it, lang)}', 20, t["ink"], 800, "middle"))
@@ -1967,7 +2117,7 @@ def card_yoy(d, l, lang, t, size=None):
         if bb - dy > 48:
             mx = max(abs(cv), abs(pv)) or 1
             for k, (v, colr) in enumerate(((pv, t["bar"]), (cv, t.get("hi", t["ink"]) if cv >= 0 else t["down"]))):
-                c.rect(bx + 26, bb - 12 - (1 - k) * 20, max(inner * abs(v) / mx, 3), 12, colr, 2)
+                c.rect(bx + 26, bb - 12 - (1 - k) * 20, max(inner * abs(v) / mx, 3), 12, colr, 2, MARK)
     if not items:
         c.add(text(P, y + 40, "—", 28, t["sub"], BODY_W))
     footer(c, d, l, lang, P, "__PAGE__")
@@ -2116,7 +2266,7 @@ def render_cards(d, lang="zh", style="light", cards=None, ratio="4:5", headline=
     at 16:9 the cover already is the landscape layout, so wide is dropped (see card_names()).
     only: indexes into card_names() to draw just those cards (page numbers n/N stay those of the full set)."""
     global CURRENT_PAGE
-    t = style if isinstance(style, dict) else resolve_style(style)
+    t = fit_contrast(style if isinstance(style, dict) else resolve_style(style))
     l = labels_for(lang, d.get("period"))
     size = RATIOS[ratio]
     names = card_names(d, cards, ratio, guidance)

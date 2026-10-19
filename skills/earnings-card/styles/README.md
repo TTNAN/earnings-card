@@ -19,4 +19,10 @@
 | `handle` | your @handle, printed in the footer (and as the author on the `post` card) |
 | `avatar` | a square image next to the handle (path relative to the JSON) |
 
+**Contrast is enforced.** Whatever colours you pick, the renderer keeps them legible on your background (WCAG ratios):
+text and the up / down colours reach 4.5:1 against the page and the boxes, bars / margin lines / `hi` 3:1, segment colours 1.5:1,
+and small chart value labels 7:1. A colour that already passes is used as is; one that doesn't is moved one step lighter (dark page)
+or darker (light page) with its hue kept, so a dark green `up` on a black page comes out as a brighter green. The latest bar is also
+kept clearly different from the older ones. `python3 tools/check_contrast.py` sweeps every style and card.
+
 PNG export uses whatever fonts are installed. For `serif` install Source Serif 4 + Noto Serif SC; for `mono` install JetBrains Mono.
