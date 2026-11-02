@@ -216,9 +216,9 @@ Ideas and bug reports are welcome in issues.
 
 If this saved you some time, feel free to buy me a coffee. ☕
 
-| Alipay | WeChat Pay |
-| ------ | ---------- |
-| <img src="assets/alipay.jpg" width="220"> | <img src="assets/wechat-pay.png" width="220"> |
+| WeChat Pay |
+| ---------- |
+| <img src="assets/wechat-pay.png" width="220"> |
 
 ## License
 

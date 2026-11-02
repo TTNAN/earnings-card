@@ -216,9 +216,9 @@ python3 -m unittest discover -s tests
 
 如果这个项目帮你省了点时间，欢迎请我喝杯咖啡。☕
 
-| 支付宝 | 微信支付 |
-| ------ | -------- |
-| <img src="assets/alipay.jpg" width="220"> | <img src="assets/wechat-pay.png" width="220"> |
+| 微信支付 |
+| -------- |
+| <img src="assets/wechat-pay.png" width="220"> |
 
 ## 协议
 
