@@ -216,7 +216,7 @@ Ideas and bug reports are welcome in issues.
 
 If this saved you some time, feel free to buy me a coffee. ☕
 
-| WeChat Pay |
+| WeChat Reward |
 | ---------- |
 | <img src="assets/wechat-pay.png" width="220"> |
 
